@@ -27,8 +27,8 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Health Check
-app.get('/health', (req, res) => {
+// Health Check (supports direct /health, /api/health, and /api/v1/health)
+app.get(['/health', '/api/health', '/api/v1/health'], (req, res) => {
   res.status(200).json({
     status: 'healthy',
     service: 'CKR Connect Enterprise API',
