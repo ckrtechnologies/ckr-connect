@@ -10,6 +10,8 @@ const dbUser = baseUser.includes('.') ? baseUser : `${baseUser}.${tenantId}`;
  * Per AGENTS.md §6, only this file reads process.env directly.
  */
 export const secrets = {
+  port: parseInt(process.env.PORT || '4000', 10),
+  nodeEnv: process.env.NODE_ENV || 'development',
   app: {
     port: parseInt(process.env.PORT || '4000', 10),
     env: process.env.NODE_ENV || 'development',

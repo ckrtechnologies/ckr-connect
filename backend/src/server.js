@@ -4,9 +4,8 @@ import { db } from './db/index.js';
 
 const startServer = async () => {
   try {
-    // Verify database connection pool on startup
-    const { rows } = await db.query('SELECT current_user, current_database(), current_schema()');
-    console.log(`[Database] Connected successfully as "${rows[0].current_user}" to "${rows[0].current_database()}" (search_path schema: "${rows[0].current_schema}")`);
+    const { rows } = await db.query('SELECT current_user, current_database() AS current_database, current_schema() AS current_schema');
+    console.log(`[Database] Connected successfully as "${rows[0].current_user}" to "${rows[0].current_database}" (search_path schema: "${rows[0].current_schema}")`);
 
     const server = app.listen(secrets.port, () => {
       console.log(`=======================================================`);
