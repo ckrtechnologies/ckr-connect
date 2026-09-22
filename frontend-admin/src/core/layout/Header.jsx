@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useAuth } from '../context/AuthContext.jsx';
-import { ShieldCheck, LogOut, User as UserIcon, Bell, ChevronDown } from 'lucide-react';
+import { toggleSiteMap } from '../store/slices/uiSlice.js';
+import { setDatePreset, setSelectedDate } from '../store/slices/dateSlice.js';
+import { ShieldCheck, LogOut, User as UserIcon, Bell, ChevronDown, Calendar } from 'lucide-react';
 
-export default function Header({ toggleSiteMap, isSiteMapCollapsed }) {
+export default function Header() {
+  const dispatch = useDispatch();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // RTK Slices
+  const isSiteMapCollapsed = useSelector((state) => state.ui.isSiteMapCollapsed);
+  const { selectedPreset, selectedDate } = useSelector((state) => state.date);
 
   return (
     <header
@@ -24,7 +32,7 @@ export default function Header({ toggleSiteMap, isSiteMapCollapsed }) {
       {/* Brand & Toggle */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <button
-          onClick={toggleSiteMap}
+          onClick={() => dispatch(toggleSiteMap())}
           style={{
             background: 'none',
             border: 'none',
@@ -79,6 +87,61 @@ export default function Header({ toggleSiteMap, isSiteMapCollapsed }) {
         </div>
       </div>
 
+      {/* Center: Global RTK Date Slice with Presets */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          background: '#2B2B2B',
+          padding: '3px 10px',
+          borderRadius: 'var(--radius-xs)',
+          border: '1px solid #3E3E3E',
+        }}
+        title="Global Platform Date (RTK Date Slice)"
+      >
+        <Calendar size={13} color="#00A4EF" />
+        <span style={{ fontSize: '11px', color: '#AAAAAA' }}>Range:</span>
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => dispatch(setSelectedDate(e.target.value))}
+          style={{
+            background: 'transparent',
+            color: '#FFFFFF',
+            border: 'none',
+            fontSize: '11px',
+            outline: 'none',
+            cursor: 'pointer',
+          }}
+        />
+        <select
+          value={selectedPreset}
+          onChange={(e) => dispatch(setDatePreset(e.target.value))}
+          style={{
+            background: '#1E1E1E',
+            color: '#FFFFFF',
+            border: '1px solid #4D4D4D',
+            borderRadius: '2px',
+            fontSize: '11px',
+            padding: '2px 4px',
+            outline: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="last_7_days">Last 7 Days</option>
+          <option value="this_week">This Week</option>
+          <option value="mtd">MTD</option>
+          <option value="this_month">This Month</option>
+          <option value="last_month">Last Month</option>
+          <option value="qtd">QTD</option>
+          <option value="ytd">YTD</option>
+          <option value="all">All Time</option>
+        </select>
+      </div>
+
       {/* Right Controls: Notifications & User Avatar Dropdown */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <div style={{ position: 'relative' }}>
@@ -113,7 +176,7 @@ export default function Header({ toggleSiteMap, isSiteMapCollapsed }) {
             </div>
             <div style={{ textAlign: 'left', lineHeight: 1.2 }}>
               <div style={{ fontSize: '12px', fontWeight: 600 }}>{user?.full_name || 'Admin'}</div>
-              <div style={{ fontSize: '10px', color: '#AAAAAA' }}>{user?.role || 'SUPER_ADMIN'}</div>
+              <div style={{ fontSize: '10px', color: '#AAAAAA' }}>{user?.role || 'admin'}</div>
             </div>
             <ChevronDown size={14} color="#AAAAAA" />
           </button>

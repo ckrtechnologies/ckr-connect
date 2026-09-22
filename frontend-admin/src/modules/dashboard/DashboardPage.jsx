@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import dashboardApi from './api.js';
+import { useDispatch, useSelector } from 'react-redux';
+import { useGetDashboardQuery } from '../../core/api/apiSlice.js';
+import { setDatePreset } from '../../core/store/slices/dateSlice.js';
 import CommandBar from '../../core/layout/CommandBar.jsx';
 import StatusBadge from '../../core/components/StatusBadge.jsx';
-import { toast } from '../../core/components/Toast.jsx';
 import {
   TrendingUp,
   Target,
@@ -24,27 +24,10 @@ const formatCurrency = (val) => {
 };
 
 export default function DashboardPage() {
-  const [data, setData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [rangePreset, setRangePreset] = useState('mtd');
-
-  const fetchDashboard = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const res = await dashboardApi.getOverview({ range: rangePreset });
-      if (res?.data) {
-        setData(res.data);
-      }
-    } catch (err) {
-      toast.error('Failed to load dashboard metrics');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [rangePreset]);
-
-  useEffect(() => {
-    fetchDashboard();
-  }, [fetchDashboard]);
+  const dispatch = useDispatch();
+  const rangePreset = useSelector((state) => state.date.selectedPreset);
+  const { data: resData, isLoading, refetch } = useGetDashboardQuery({ range: rangePreset });
+  const data = resData?.data;
 
   const kpis = data?.kpis || {};
   const funnel = data?.funnel || [];
@@ -70,7 +53,7 @@ export default function DashboardPage() {
           </span>
           <select
             value={rangePreset}
-            onChange={(e) => setRangePreset(e.target.value)}
+            onChange={(e) => dispatch(setDatePreset(e.target.value))}
             className="fluent-select"
             style={{ width: '130px', height: '28px', fontSize: '12px' }}
           >

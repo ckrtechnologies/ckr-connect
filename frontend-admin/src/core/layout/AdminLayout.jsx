@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { useAuth } from '../context/AuthContext.jsx';
 import Header from './Header.jsx';
 import SiteMap from './SiteMap.jsx';
@@ -7,7 +8,7 @@ import { ToastContainer } from '../components/Toast.jsx';
 
 export default function AdminLayout() {
   const { isAuthenticated, loading } = useAuth();
-  const [isSiteMapCollapsed, setIsSiteMapCollapsed] = useState(false);
+  const isSiteMapCollapsed = useSelector((state) => state.ui.isSiteMapCollapsed);
 
   if (loading) {
     return (
@@ -42,10 +43,7 @@ export default function AdminLayout() {
         backgroundColor: 'var(--color-background)',
       }}
     >
-      <Header
-        toggleSiteMap={() => setIsSiteMapCollapsed(!isSiteMapCollapsed)}
-        isSiteMapCollapsed={isSiteMapCollapsed}
-      />
+      <Header />
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <SiteMap isCollapsed={isSiteMapCollapsed} />

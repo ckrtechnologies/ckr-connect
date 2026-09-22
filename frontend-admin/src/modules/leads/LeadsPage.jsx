@@ -1,5 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { useGetLeadsQuery } from '../../core/api/apiSlice.js';
+import { setQuickCreateOpen, setActiveLeadFilterTab } from '../../core/store/slices/uiSlice.js';
 import leadsApi from './api.js';
 import CommandBar from '../../core/layout/CommandBar.jsx';
 import DataGrid from '../../core/components/DataGrid.jsx';
@@ -21,37 +24,19 @@ const formatCurrency = (val) => {
 
 export default function LeadsPage() {
   const navigate = useNavigate();
-  const [leads, setLeads] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [activeTab, setActiveTab] = useState('ALL');
+  const dispatch = useDispatch();
 
-  // Modals & Drawers state
-  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  const activeTab = useSelector((state) => state.ui.activeLeadFilterTab);
+  const isQuickCreateOpen = useSelector((state) => state.ui.isQuickCreateOpen);
+
+  const [selectedIds, setSelectedIds] = useState([]);
   const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false);
   const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
 
-  const fetchLeads = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const params = {};
-      if (activeTab !== 'ALL') {
-        params.status = activeTab;
-      }
-      const res = await leadsApi.listLeads(params);
-      if (res?.data) {
-        setLeads(res.data.leads || res.data || []);
-      }
-    } catch (err) {
-      toast.error('Failed to load leads roster');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
-    fetchLeads();
-  }, [fetchLeads]);
+  const { data: resData, isLoading, refetch } = useGetLeadsQuery(
+    activeTab !== 'ALL' ? { status: activeTab } : {}
+  );
+  const leads = resData?.data?.leads || resData?.data || [];
 
   const handleExportCsv = async () => {
     try {
@@ -169,7 +154,7 @@ export default function LeadsPage() {
             label: 'New Lead',
             primary: true,
             icon: <Plus size={14} />,
-            onClick: () => setIsQuickCreateOpen(true),
+            onClick: () => dispatch(setQuickCreateOpen(true)),
           },
           {
             label: 'Assign Rep',
@@ -190,7 +175,7 @@ export default function LeadsPage() {
           {
             label: 'Refresh',
             icon: <RefreshCw size={14} className={isLoading ? 'spin' : ''} />,
-            onClick: fetchLeads,
+            onClick: refetch,
           },
         ]}
       />
@@ -206,7 +191,7 @@ export default function LeadsPage() {
           isLoading={isLoading}
           filterTabs={filterTabs}
           activeFilterTab={activeTab}
-          onFilterTabChange={setActiveTab}
+          onFilterTabChange={(tab) => dispatch(setActiveLeadFilterTab(tab))}
           searchPlaceholder="Search by company, contact, or title..."
         />
       </div>
@@ -214,8 +199,8 @@ export default function LeadsPage() {
       {/* Quick Create Drawer */}
       <QuickCreateDrawer
         isOpen={isQuickCreateOpen}
-        onClose={() => setIsQuickCreateOpen(false)}
-        onSuccess={fetchLeads}
+        onClose={() => dispatch(setQuickCreateOpen(false))}
+        onSuccess={refetch}
       />
 
       {/* Bulk Assign Modal */}
@@ -225,7 +210,7 @@ export default function LeadsPage() {
         selectedLeadIds={selectedIds}
         onSuccess={() => {
           setSelectedIds([]);
-          fetchLeads();
+          refetch();
         }}
       />
 
