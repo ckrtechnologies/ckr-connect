@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>CKR Connect — Operations & Sales Intelligence Prototype v0.1 · 22 Sep 2026</title>
+
+  <!-- Typography & Design Tokens -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI+Variable:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="styles.css">
+
+  <style>
+    /* Toast styles */
+    #proto-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #201F1E;
+      color: #FFFFFF;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: var(--shadow-level2);
+      border-left: 4px solid var(--color-primary);
+      z-index: 9999;
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: all 200ms ease;
+    }
+    #proto-toast.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="proto-shell">
+    <!-- Top Meta & Testing Control Bar -->
+    <div class="proto-topbar">
+      <div class="proto-topbar-left">
+        <div class="proto-brand">
+          <span>CKR CONNECT</span>
+          <span class="proto-brand-tag">PROTOTYPE v0.1</span>
+        </div>
+        <span class="proto-separator">|</span>
+        <div class="proto-screen-badge" id="proto-screen-badge">A-03 · Lead Management</div>
+      </div>
+
+      <div class="proto-topbar-center">
+        <!-- Direct Screen Selector (28 Screens) -->
+        <select class="proto-screen-select" id="proto-screen-select">
+          <optgroup label="Admin Panel (A-01 to A-18)">
+            <option value="A-01">A-01: Admin Login</option>
+            <option value="A-02">A-02: Executive Dashboard (Waterfall & Funnel)</option>
+            <option value="A-03" selected>A-03: Lead Management Grid (Command Bar)</option>
+            <option value="A-04">A-04: Lead Detail & BPF Chevron Bar</option>
+            <option value="A-05">A-05: Quick Create Lead Panel</option>
+            <option value="A-06">A-06: Bulk CSV Upload & Validation</option>
+            <option value="A-07">A-07: Assign / Reassign Leads</option>
+            <option value="A-08">A-08: Staff Management (BDM Roster)</option>
+            <option value="A-09">A-09: Quick Create Staff + Password Dialog</option>
+            <option value="A-10">A-10: Offering Tags Master</option>
+            <option value="A-11">A-11: Monthly Attendance Matrix</option>
+            <option value="A-12">A-12: Attendance Punch Audit Edit</option>
+            <option value="A-13">A-13: Holiday Calendar</option>
+            <option value="A-14">A-14: Admin Notifications</option>
+            <option value="A-15">A-15: Export & Reports</option>
+            <option value="A-16">A-16: Daily Interaction Report</option>
+            <option value="A-19">A-19: Daily Interaction History & Calling Ledger</option>
+            <option value="A-17">A-17: Accounts Directory (Parent Entities)</option>
+            <option value="A-18">A-18: Account Detail & Lifetime History</option>
+          </optgroup>
+          <optgroup label="BDM Mobile App (B-01 to B-10)">
+            <option value="B-01">B-01: BDM Login</option>
+            <option value="B-02">B-02: BDM Workspace & My Performance</option>
+            <option value="B-03">B-03: Attendance Punch In / Out</option>
+            <option value="B-04">B-04: Attendance Punch History</option>
+            <option value="B-05">B-05: My Assigned Leads</option>
+            <option value="B-06">B-06: Mobile Lead Detail & Stepper</option>
+            <option value="B-07">B-07: Log Follow-up Interaction</option>
+            <option value="B-08">B-08: Upload BRD File (VPS Storage)</option>
+            <option value="B-09">B-09: Mobile Alerts Feed</option>
+            <option value="B-10">B-10: First-Login Welcome Walkthrough</option>
+          </optgroup>
+          <optgroup label="Approval & Documentation">
+            <option value="SIGNOFF">Sign-Off: Internal Review Sheet</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="proto-topbar-right">
+        <!-- Global Platform Date Range & Presets (RTK Date Slice) -->
+        <div class="proto-control-group" title="Global Platform Date (Filters dashboard, interactions & attendance)">
+          <span style="font-size: 11px;">📅 Date:</span>
+          <input type="date" id="proto-date-picker" value="2026-09-22" onchange="app.setGlobalDate(this.value)" style="background: #2D2D2D; color: #FFFFFF; border: 1px solid #4D4D4D; border-radius: 3px; font-size: 11px; padding: 2px 4px; outline: none; cursor: pointer;" />
+          <select id="proto-range-select" onchange="app.selectDatePreset(this.value)" style="background: #2D2D2D; color: #FFFFFF; border: 1px solid #4D4D4D; border-radius: 3px; font-size: 11px; padding: 2px 4px; outline: none; cursor: pointer;">
+            <option value="today" selected>Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="last_7_days">Last 7 Days</option>
+            <option value="this_week">This Week</option>
+            <option value="mtd">MTD</option>
+            <option value="this_month">This Month</option>
+            <option value="last_month">Last Month</option>
+            <option value="qtd">QTD</option>
+            <option value="ytd">YTD</option>
+            <option value="this_year">This Year</option>
+            <option value="last_year">Last Year</option>
+            <option value="all">All Time</option>
+          </select>
+        </div>
+
+        <!-- Quick Create Dock Side Switcher (DESIGN.md §2.7) -->
+        <div class="proto-control-group" title="Test Authentic Dynamics Right Dock vs Left Drawer">
+          <span>Panel Side:</span>
+          <button class="proto-btn-toggle" data-panel-side="left">Left</button>
+          <button class="proto-btn-toggle active" data-panel-side="right">Right</button>
+        </div>
+
+        <!-- Unhappy State Simulator -->
+        <div class="proto-control-group">
+          <span>State:</span>
+          <select id="proto-state-select" style="background: transparent; color: #FFFFFF; border: none; font-size: 11px; outline: none; cursor: pointer;">
+            <option value="normal">Normal</option>
+            <option value="skeleton">Skeleton Shimmer</option>
+            <option value="empty">Empty State</option>
+            <option value="error">Error State</option>
+          </select>
+        </div>
+
+        <!-- Formal Sign-Off Button -->
+        <button class="proto-btn-signoff" id="proto-signoff-btn">
+          ✓ Sign-off Sheet
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="proto-main-container">
+      <!-- Left Platform Switcher -->
+      <aside class="proto-platform-bar">
+        <button class="proto-platform-btn active" data-platform="admin" title="Admin Desktop Web Portal">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm1 2v8h14V4H1zm0 9v1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1H1zm14-10H1V2a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v1z"/></svg>
+          <span>Admin</span>
+        </button>
+
+        <button class="proto-platform-btn" data-platform="bdm" title="BDM Mobile-First App (390×844)">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M11 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h6zM5 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H5z"/><path d="M8 14a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
+          <span>BDM</span>
+        </button>
+      </aside>
+
+      <!-- Center Viewport Canvas -->
+      <main class="proto-viewport-canvas" id="proto-viewport-canvas">
+        <!-- Rendered dynamically by app.js -->
+      </main>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="proto-toast">Notification message</div>
+
+  <!-- Prototype Scripts -->
+  <script src="mockData.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
