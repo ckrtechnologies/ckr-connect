@@ -6,7 +6,9 @@ import {
   createLeadSchema,
   updateLeadSchema,
   updateStatusSchema,
-  bulkAssignSchema
+  bulkAssignSchema,
+  bulkDeleteSchema,
+  bulkTagsSchema
 } from './validation.js';
 
 const router = Router();
@@ -16,6 +18,8 @@ router.post('/', validate(createLeadSchema), adminLeadsController.createLead);
 router.get('/export-csv', adminLeadsController.exportCsv);
 router.post('/import-csv', uploadCsv.single('file'), adminLeadsController.importCsv);
 router.post('/bulk-assign', validate(bulkAssignSchema), adminLeadsController.bulkAssign);
+router.post('/bulk-delete', validate(bulkDeleteSchema), adminLeadsController.bulkDelete);
+router.post('/bulk-tags', validate(bulkTagsSchema), adminLeadsController.bulkTags);
 
 router.get('/:id', adminLeadsController.getLeadById);
 router.put('/:id', validate(updateLeadSchema), adminLeadsController.updateLead);

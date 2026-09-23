@@ -23,7 +23,7 @@ const parseDocuments = (brd_url, fallbackDate) => {
 export const adminLeadsService = {
   async listLeads(queryParams) {
     const page = Math.max(1, parseInt(queryParams.page, 10) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(queryParams.limit, 10) || 25));
+    const limit = Math.min(10000, Math.max(1, parseInt(queryParams.limit, 10) || 25));
 
     const filters = {
       status: queryParams.status,
@@ -31,6 +31,7 @@ export const adminLeadsService = {
       assigned_to: queryParams.assigned_to,
       tag_id: queryParams.tag_id,
       search: queryParams.search,
+      has_followup: queryParams.has_followup === 'true' || queryParams.has_followup === true,
       page,
       limit,
       sort_by: queryParams.sort_by || 'created_at',
@@ -76,7 +77,16 @@ export const adminLeadsService = {
       effectiveCreator = rows[0]?.id;
     }
 
-    if (!data.tag_id) {
+    const terminalStatuses = ['won', 'lost', 'invalid'];
+    const status = data.status || 'new';
+    if (!terminalStatuses.includes(status) && !data.next_followup_date) {
+      const err = new Error('A Next Follow-up Date is mandatory for active leads.');
+      err.statusCode = 400;
+      err.code = 'FOLLOWUP_DATE_REQUIRED';
+      throw err;
+    }
+
+    if (!data.tag_id && (!data.tag_ids || data.tag_ids.length === 0)) {
       const { rows } = await db.query('SELECT id FROM connect.tags WHERE is_active = true ORDER BY name ASC LIMIT 1');
       if (rows[0]) {
         data.tag_id = rows[0].id;
@@ -118,6 +128,18 @@ export const adminLeadsService = {
       err.code = 'LEAD_NOT_FOUND';
       throw err;
     }
+
+    const terminalStatuses = ['won', 'lost', 'invalid'];
+    const newStatus = data.status || existing.status;
+    const followupDate = data.next_followup_date !== undefined ? data.next_followup_date : existing.next_followup_date;
+    
+    if (!terminalStatuses.includes(newStatus) && !followupDate) {
+      const err = new Error('A Next Follow-up Date is mandatory for active leads.');
+      err.statusCode = 400;
+      err.code = 'FOLLOWUP_DATE_REQUIRED';
+      throw err;
+    }
+
     return await adminLeadsRepository.update(id, data);
   },
 
@@ -127,6 +149,14 @@ export const adminLeadsService = {
       const err = new Error('Lead not found');
       err.statusCode = 404;
       err.code = 'LEAD_NOT_FOUND';
+      throw err;
+    }
+
+    const terminalStatuses = ['won', 'lost', 'invalid'];
+    if (!terminalStatuses.includes(status) && !existing.next_followup_date) {
+      const err = new Error('A Next Follow-up Date is mandatory for active leads. Please set one before changing the stage.');
+      err.statusCode = 400;
+      err.code = 'FOLLOWUP_DATE_REQUIRED';
       throw err;
     }
 
@@ -152,6 +182,16 @@ export const adminLeadsService = {
     }
 
     return await adminLeadsRepository.updateStatus(id, status, lostReason, invalidReason, wonAmount);
+  },
+
+  
+  async bulkDelete(leadIds) {
+    return await adminLeadsRepository.bulkDelete(leadIds);
+  },
+
+  async bulkTags(leadIds, tagsToAdd, tagsToRemove) {
+    if (!leadIds || leadIds.length === 0) throw new Error('No leads specified');
+    return await adminLeadsRepository.bulkTags(leadIds, tagsToAdd, tagsToRemove);
   },
 
   async bulkAssign(leadIds, assignedTo, adminUserId) {
@@ -186,20 +226,56 @@ export const adminLeadsService = {
               phone: phone.trim(),
               city: data.city ? data.city.trim() : null,
               state: data.state ? data.state.trim() : null,
-              source: data.source ? data.source.trim().toLowerCase() : 'website',
+              source: (() => {
+                const validSources = ['website', 'referral', 'cold_call', 'social_media', 'walk_in', 'meta_lead_ads', 'whatsapp_ads', 'bdm_inbound', 'manual_admin', 'other'];
+                let src = data.source ? data.source.trim().toLowerCase() : 'website';
+                if (src === 'outbound') return 'cold_call';
+                if (src === 'inbound') return 'bdm_inbound';
+                if (!validSources.includes(src)) return 'other';
+                return src;
+              })(),
               expected_value: data.expected_value ? parseFloat(data.expected_value) : 0,
-              assigned_to: data.assigned_to ? data.assigned_to.trim() : null
+              assigned_to: data.assigned_to ? data.assigned_to.trim() : null,
+              raw_tags: data.tags || data.tag || ''
             });
           }
         })
         .on('end', async () => {
           try {
             if (results.length === 0) {
-              const err = new Error('CSV file contains no valid rows with name/lead_name and phone');
+              const err = new Error('CSV file contains no valid rows with name and phone');
               err.statusCode = 400;
               err.code = 'EMPTY_CSV';
               throw err;
             }
+
+            // Fetch all tags to map names to IDs
+            const { rows: allTags } = await db.query('SELECT id, name FROM connect.tags');
+            const tagMap = new Map(allTags.map(t => [t.name.toLowerCase().trim(), t.id]));
+
+            // Process tags for each lead
+            for (const lead of results) {
+              lead.tag_ids = [];
+              if (lead.raw_tags) {
+                const tagNames = lead.raw_tags.split(',').map(s => s.trim()).filter(Boolean);
+                for (const tName of tagNames) {
+                  const key = tName.toLowerCase();
+                  if (tagMap.has(key)) {
+                    lead.tag_ids.push(tagMap.get(key));
+                  } else {
+                    // Auto-create new tag
+                    const newTag = await db.query(
+                      "INSERT INTO connect.tags (name, type) VALUES ($1, 'product') ON CONFLICT (name) DO UPDATE SET is_active = true RETURNING id",
+                      [tName]
+                    );
+                    const newId = newTag.rows[0].id;
+                    tagMap.set(key, newId);
+                    lead.tag_ids.push(newId);
+                  }
+                }
+              }
+            }
+
             const inserted = await adminLeadsRepository.batchCreate(results, creatorUserId);
             fs.unlink(filePath, () => {});
             resolve({ count: inserted.length, items: inserted });
@@ -235,7 +311,8 @@ export const adminLeadsService = {
       'Expected Value',
       'Won Amount',
       'Assigned BDM',
-      'Created At'
+      'Created At',
+      'Next Follow-up Date'
     ];
 
     const rows = allLeads.map(l => [
@@ -251,7 +328,8 @@ export const adminLeadsService = {
       l.expected_value || 0,
       l.won_amount || 0,
       `"${(l.assigned_bdm_name || 'Unassigned').replace(/"/g, '""')}"`,
-      `"${l.created_at}"`
+      `"${l.created_at}"`,
+      `"${l.next_followup_date ? new Date(l.next_followup_date).toLocaleString('en-IN') : ''}"`
     ]);
 
     return [headers.join(','), ...rows.map(r => r.join(','))].join('\n');

@@ -78,7 +78,12 @@ export const adminAttendanceService = {
           else if (status === 'absent') bdmData.summary.absent++;
           else if (status === 'on_leave') bdmData.summary.on_leave++;
         } else if (dateStr < todayIso) {
-          if (bdmData.date_of_joining && dateStr >= bdmData.date_of_joining) {
+          let joiningDateStr = null;
+          if (bdmData.date_of_joining) {
+            const d = new Date(bdmData.date_of_joining);
+            joiningDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          }
+          if (joiningDateStr && dateStr >= joiningDateStr) {
             status = 'absent';
             bdmData.summary.absent++;
           }

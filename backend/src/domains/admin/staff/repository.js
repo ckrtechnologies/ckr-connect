@@ -41,6 +41,7 @@ export const adminStaffRepository = {
         u.designation,
         u.department,
         u.status,
+        u.date_of_joining,
         u.profile_photo_url AS avatar_url,
         u.is_active,
         u.sales_target AS target_amount,
@@ -72,6 +73,7 @@ export const adminStaffRepository = {
         u.designation,
         u.department,
         u.status,
+        u.date_of_joining,
         u.profile_photo_url AS avatar_url,
         u.is_active,
         u.sales_target AS target_amount,
@@ -110,9 +112,7 @@ export const adminStaffRepository = {
     const employeeId = data.employee_id || (await this.generateEmployeeId(data.role));
     const query = `
       INSERT INTO connect.users (
-        employee_id, name, email, phone, designation, password_hash, role,
-        sales_target, force_password_reset, status, is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, 'active', true)
+        employee_id, name, email, phone, designation, password_hash, role, sales_target, date_of_joining, force_password_reset, status, is_active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, 'active', true)
       RETURNING id, employee_id, name, email, phone, designation, role, status, is_active, sales_target AS target_amount, created_at
     `;
     const { rows } = await db.query(query, [
@@ -123,7 +123,8 @@ export const adminStaffRepository = {
       data.designation || (data.role === 'admin' ? 'Administrator' : 'Business Development Manager'),
       data.password_hash,
       data.role || 'bdm',
-      data.target_amount || data.sales_target || 0
+      data.target_amount || data.sales_target || 0,
+      data.date_of_joining || null
     ]);
     return rows[0];
   },
@@ -144,6 +145,10 @@ export const adminStaffRepository = {
     if (data.phone !== undefined) {
       fields.push(`phone = $${idx++}`);
       values.push(data.phone);
+    }
+    if (data.date_of_joining !== undefined) {
+      fields.push(`date_of_joining = $${idx++}`);
+      values.push(data.date_of_joining);
     }
     if (data.role !== undefined) {
       fields.push(`role = $${idx++}`);

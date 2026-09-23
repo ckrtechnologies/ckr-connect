@@ -3,32 +3,40 @@ import { useNavigate } from 'react-router-dom';
 import { useBootstrap } from '../../../core/context/BootstrapContext.jsx';
 import leadsApi from '../api.js';
 import { toast } from '../../../core/components/Toast.jsx';
+import MultiSelectDropdown from '../../../core/components/MultiSelectDropdown.jsx';
+import DateTimePicker from '../../../core/components/DateTimePicker.jsx';
 
 export default function QuickCreateDrawer({ isOpen, onClose, onSuccess }) {
   const navigate = useNavigate();
   const { tags, bdms } = useBootstrap();
 
-  const defaultFollowUp = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+  const defaultFollowUpDate = new Date(Date.now() + 2 * 86400000);
+  defaultFollowUpDate.setHours(10, 0, 0, 0); // Default to 10:00 AM
+  const defaultFollowUp = defaultFollowUpDate.toISOString();
 
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     discussion_notes: '',
     company_name: '',
-    tag_id: '',
+    tag_ids: [],
     expected_value: '',
     next_followup_date: defaultFollowUp,
     city: '',
     state: 'Delhi',
     email: '',
     assigned_to: '',
+    status: 'new',
   });
+
+  const terminalStatuses = ['won', 'lost', 'invalid'];
+  const isTerminal = terminalStatuses.includes(formData.status);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (tags && tags.length > 0 && !formData.tag_id) {
-      setFormData((prev) => ({ ...prev, tag_id: tags[0].id }));
+    if (tags && tags.length > 0 && (!formData.tag_ids || formData.tag_ids.length === 0)) {
+      setFormData((prev) => ({ ...prev, tag_ids: [tags[0].id] }));
     }
     if (bdms && bdms.length > 0 && !formData.assigned_to) {
       setFormData((prev) => ({ ...prev, assigned_to: bdms[0].id }));
@@ -65,14 +73,14 @@ export default function QuickCreateDrawer({ isOpen, onClose, onSuccess }) {
         discussion_notes: formData.discussion_notes.trim(),
         sub_requirement: formData.discussion_notes.trim(),
         company_name: formData.company_name?.trim() || formData.name.trim(),
-        tag_id: formData.tag_id || undefined,
+        tag_ids: formData.tag_ids && formData.tag_ids.length > 0 ? formData.tag_ids : undefined,
         expected_value: formData.expected_value ? Number(formData.expected_value) : 0,
         assigned_to: formData.assigned_to || undefined,
-        next_followup_date: formData.next_followup_date || undefined,
+        next_followup_date: isTerminal ? undefined : (formData.next_followup_date || undefined),
         city: formData.city?.trim() || undefined,
         state: formData.state || undefined,
         email: formData.email?.trim() || undefined,
-        status: 'new',
+        status: formData.status || 'new',
       };
 
       const res = await leadsApi.createLead(payload);
@@ -84,13 +92,14 @@ export default function QuickCreateDrawer({ isOpen, onClose, onSuccess }) {
         phone: '',
         discussion_notes: '',
         company_name: '',
-        tag_id: tags[0]?.id || '',
+        tag_ids: tags[0]?.id ? [tags[0].id] : [],
         expected_value: '',
         next_followup_date: defaultFollowUp,
         city: '',
         state: 'Delhi',
         email: '',
         assigned_to: bdms[0]?.id || '',
+        status: 'new',
       });
 
       if (onSuccess) onSuccess();
@@ -234,19 +243,13 @@ export default function QuickCreateDrawer({ isOpen, onClose, onSuccess }) {
               </div>
 
               <div className="form-field-group full-width">
-                <label className="form-field-label">Offering / Solution Tag</label>
-                <select
-                  className="form-field-select"
-                  id="tag_id"
-                  value={formData.tag_id}
-                  onChange={handleChange}
-                >
-                  {tags.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.type})
-                    </option>
-                  ))}
-                </select>
+                <label className="form-field-label">Offering / Solution Tags</label>
+                <MultiSelectDropdown 
+                  options={(tags || []).map(t => ({ label: `${t.name} (${t.type})`, value: t.id }))}
+                  value={formData.tag_ids || []}
+                  onChange={(values) => setFormData(prev => ({ ...prev, tag_ids: values }))}
+                  placeholder="Select offering/solution tags..."
+                />
               </div>
 
               <div className="form-field-group">
@@ -262,15 +265,31 @@ export default function QuickCreateDrawer({ isOpen, onClose, onSuccess }) {
               </div>
 
               <div className="form-field-group">
-                <label className="form-field-label">Next Follow-up Due Date</label>
-                <input
-                  type="date"
-                  className="form-field-input"
-                  id="next_followup_date"
-                  value={formData.next_followup_date}
-                  onChange={handleChange}
-                />
+                <label className="form-field-label">Lead Stage / Status</label>
+                <select
+                  className="form-field-select"
+                  value={formData.status}
+                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+                >
+                  <option value="new">🟢 New</option>
+                  <option value="contacted">📞 Contacted</option>
+                  <option value="follow_up">🔄 Follow Up</option>
+                  <option value="proposal">📋 Proposal</option>
+                  <option value="won">🏆 Won</option>
+                  <option value="lost">❌ Lost</option>
+                  <option value="invalid">🚫 Invalid / Junk</option>
+                </select>
               </div>
+
+              {!isTerminal && (
+                <div className="form-field-group">
+                  <label className="form-field-label">Next Follow-up Due Date & Time</label>
+                  <DateTimePicker
+                    value={formData.next_followup_date}
+                    onChange={(val) => setFormData((prev) => ({ ...prev, next_followup_date: val }))}
+                  />
+                </div>
+              )}
 
               <div className="form-field-group">
                 <label className="form-field-label">City</label>

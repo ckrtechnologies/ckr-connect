@@ -51,6 +51,27 @@ export const adminLeadsController = {
     }
   },
 
+  
+  async bulkDelete(req, res, next) {
+    try {
+      const { lead_ids } = req.body;
+      const count = await adminLeadsService.bulkDelete(lead_ids);
+      return successResponse(res, { count }, `Successfully deleted ${count} leads`);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async bulkTags(req, res, next) {
+    try {
+      const { lead_ids, tags_to_add, tags_to_remove } = req.body;
+      const data = await adminLeadsService.bulkTags(lead_ids, tags_to_add, tags_to_remove);
+      return successResponse(res, data, 'Tags updated successfully for selected leads');
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async bulkAssign(req, res, next) {
     try {
       const { lead_ids } = req.body;
@@ -70,7 +91,7 @@ export const adminLeadsController = {
         err.code = 'NO_FILE_UPLOADED';
         throw err;
       }
-      const data = await adminLeadsService.importCsv(req.file.path);
+      const data = await adminLeadsService.importCsv(req.file.path, req.user.id);
       return successResponse(res, data, `Successfully imported ${data.count} leads from CSV`, 201);
     } catch (err) {
       next(err);

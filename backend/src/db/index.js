@@ -27,12 +27,24 @@ export const pool = new Pool({
   database: secrets.db.database,
   user: secrets.db.user,
   password: secrets.db.password,
-  max: 20, // Increased to 20 to handle concurrent API requests from the frontend dashboard
-  idleTimeoutMillis: 60000,
-  connectionTimeoutMillis: 15000,
+  // Supavisor allows 100 client connections (POOLER_MAX_CLIENT_CONN=100)
+  // and multiplexes them onto 5 real DB connections (transaction mode).
+  // So we can safely use more client-side connections.
+  max: 10,
+  // In transaction-mode pooling, Supavisor reclaims server connections
+  // after each query. Keep idle timeout very short so Node.js doesn't
+  // try to reuse a connection that Supavisor already recycled.
+  idleTimeoutMillis: 2000,
+  // Fail fast on connection attempts — better to retry quickly than hang for 10s
+  connectionTimeoutMillis: 5000,
+  // TCP keepalive detects dead sockets (OS keepalive_time is now 60s)
   keepAlive: true,
+  keepAliveInitialDelayMillis: 500,
+  // Query guard rails
   statement_timeout: 15000,
   query_timeout: 15000,
+  // Allow connections to be destroyed and recreated rather than reused stale
+  allowExitOnIdle: false,
   ssl: false,
   options: '-c search_path=connect,extensions,public'
 });

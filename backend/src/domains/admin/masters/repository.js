@@ -4,9 +4,9 @@ export const adminMastersRepository = {
   // --- TAGS ---
   async getAllTags() {
     const { rows } = await db.query(
-      `SELECT t.*, COUNT(l.id)::int AS usage_count
+      `SELECT t.*, COUNT(lt.lead_id)::int AS usage_count
        FROM connect.tags t
-       LEFT JOIN connect.leads l ON t.id = l.tag_id
+       LEFT JOIN connect.lead_tags lt ON t.id = lt.tag_id
        GROUP BY t.id
        ORDER BY t.name ASC`
     );
@@ -31,10 +31,10 @@ export const adminMastersRepository = {
 
   async createTag(data) {
     const { rows } = await db.query(
-      `INSERT INTO connect.tags (name, type, is_active)
-       VALUES ($1, $2, true)
+      `INSERT INTO connect.tags (name, type, color_hex, is_active)
+       VALUES ($1, $2, $3, true)
        RETURNING *`,
-      [data.name.trim(), data.type || 'product']
+      [data.name.trim(), data.type || 'product', data.color_hex || '#0078D4']
     );
     return rows[0];
   },
@@ -51,6 +51,10 @@ export const adminMastersRepository = {
     if (data.type !== undefined) {
       fields.push(`type = $${idx++}`);
       values.push(data.type);
+    }
+    if (data.color_hex !== undefined) {
+      fields.push(`color_hex = $${idx++}`);
+      values.push(data.color_hex);
     }
     if (data.is_active !== undefined) {
       fields.push(`is_active = $${idx++}`);

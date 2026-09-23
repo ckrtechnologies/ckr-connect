@@ -13,6 +13,7 @@ export default function ReportsPage() {
   const activeTab = searchParams.get('tab') || 'interactions';
   const { dateRange } = useSelector((state) => state.date);
 
+  const [followupBdmFilter, setFollowupBdmFilter] = useState('all');
   const [channelFilter, setChannelFilter] = useState('all');
   const [bdmFilter, setBdmFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,7 +27,7 @@ export default function ReportsPage() {
     end_date: dateRange?.endDate || undefined,
   });
   const { data: staffRes } = useGetStaffQuery();
-  const { data: followupsRes, isLoading: isLoadingFollowups } = useGetLeadsQuery({ status: 'follow_up', limit: 100 });
+  const { data: followupsRes, isLoading: isLoadingFollowups } = useGetLeadsQuery({ has_followup: true, limit: 1000 });
 
   const allInteractions = useMemo(() => {
     if (Array.isArray(interactionsRes?.data?.items)) return interactionsRes.data.items;
@@ -63,8 +64,13 @@ export default function ReportsPage() {
         }
       });
     }
+
+    if (followupBdmFilter !== 'all') {
+      list = list.filter(f => f.assigned_to === followupBdmFilter);
+    }
+    
     return list;
-  }, [followupsRes, dateRange]);
+  }, [followupsRes, dateRange, followupBdmFilter]);
 
   // Filtering
   const filteredInteractions = useMemo(() => {
@@ -170,8 +176,22 @@ export default function ReportsPage() {
 
         {activeTab === 'followup' && (
           <div className="fluent-grid-container">
-            <div className="fluent-grid-toolbar">
+            <div className="fluent-grid-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '14px', fontWeight: 600 }}>Pending Follow-ups ({followups.length})</span>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: 500 }}>Filter by BDM:</span>
+                <select 
+                  className="form-field-input" 
+                  style={{ width: '150px', height: '26px', fontSize: '12px', padding: '0 8px' }}
+                  value={followupBdmFilter}
+                  onChange={e => setFollowupBdmFilter(e.target.value)}
+                >
+                  <option value="all">All BDMs</option>
+                  {bdms.map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table className="fluent-grid-table">
@@ -200,7 +220,17 @@ export default function ReportsPage() {
                   ) : (
                     followups.map(f => (
                       <tr key={f.id}>
-                        <td><strong>{f.name}</strong></td>
+                        <td>
+                          <strong>{f.name}</strong>
+                          {f.status && (
+                            <span
+                              className={`status-badge ${f.status === 'won' ? 'won' : f.status === 'invalid' ? 'invalid' : ''}`}
+                              style={{ marginLeft: '8px', fontSize: '10px', textTransform: 'uppercase' }}
+                            >
+                              {f.status.replace('_', ' ')}
+                            </span>
+                          )}
+                        </td>
                         <td>{f.company_name || '—'}</td>
                         <td style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
                           {f.next_followup_date ? new Date(f.next_followup_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
@@ -209,7 +239,7 @@ export default function ReportsPage() {
                         <td style={{ textAlign: 'right' }}>
                           <button
                             className="fluent-btn fluent-btn-primary"
-                            style={{ height: '26px', fontSize: '11px', padding: '0 8px' }}
+                            style={{ height: '26px', fontSize: '11px', padding: '0 8px', color: '#ffffff' }}
                             onClick={() => navigate(`/leads/${f.id}`)}
                           >
                             View Lead

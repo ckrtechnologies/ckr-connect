@@ -7,11 +7,9 @@ import App from './App.jsx';
 import './core/theme/global.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <Provider store={store}>
-      <BrowserRouter basename="/admin">
-        <App />
-      </BrowserRouter>
-    </Provider>
-  </React.StrictMode>
+  <Provider store={store}>
+    <BrowserRouter basename="/admin">
+      <App />
+    </BrowserRouter>
+  </Provider>
 );

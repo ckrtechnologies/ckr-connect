@@ -10,8 +10,8 @@ export const adminLeadsRepository = {
       source,
       assigned_to,
       tag_id,
+      tags,
       search,
-      has_followup,
       page = 1,
       limit = 25,
       sort_by = 'created_at',
@@ -21,10 +21,6 @@ export const adminLeadsRepository = {
     const conditions = [];
     const values = [];
     let idx = 1;
-
-    if (has_followup) {
-      conditions.push(`l.next_followup_date IS NOT NULL`);
-    }
 
     if (status && status !== 'all') {
       conditions.push(`l.status = $${idx++}`);
@@ -45,9 +41,11 @@ export const adminLeadsRepository = {
       }
     }
 
-    if (tag_id) {
-      conditions.push(`l.id IN (SELECT lead_id FROM connect.lead_tags WHERE tag_id = ${idx++})`);
-      values.push(tag_id);
+    // Support both single tag_id (old) and tags array (new)
+    const filterTags = tags || (tag_id ? [tag_id] : null);
+    if (filterTags && filterTags.length > 0) {
+      conditions.push(`l.id IN (SELECT lead_id FROM connect.lead_tags WHERE tag_id = ANY($${idx++}))`);
+      values.push(filterTags);
     }
 
     if (search) {
@@ -79,12 +77,6 @@ export const adminLeadsRepository = {
         l.city,
         l.state,
         l.source,
-        (
-          SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'color_hex', t.color_hex))
-          FROM connect.lead_tags lt
-          JOIN connect.tags t ON lt.tag_id = t.id
-          WHERE lt.lead_id = l.id
-        ) AS tags,
         l.deal_type,
         l.status,
         l.priority,
@@ -102,6 +94,12 @@ export const adminLeadsRepository = {
         l.invalid_reason,
         l.created_at,
         l.updated_at,
+        (
+          SELECT COALESCE(json_agg(json_build_object('id', t.id, 'name', t.name, 'type', t.type, 'color_hex', t.color_hex)), '[]'::json)
+          FROM connect.lead_tags lt
+          JOIN connect.tags t ON lt.tag_id = t.id
+          WHERE lt.lead_id = l.id
+        ) AS tags,
         (
           SELECT json_build_object(
             'type', i.type,
@@ -130,14 +128,10 @@ export const adminLeadsRepository = {
    * Count total filtered leads
    */
   async countFiltered(filters = {}) {
-    const { status, source, assigned_to, tag_id, search, has_followup } = filters;
+    const { status, source, assigned_to, tag_id, tags, search } = filters;
     const conditions = [];
     const values = [];
     let idx = 1;
-
-    if (has_followup) {
-      conditions.push(`l.next_followup_date IS NOT NULL`);
-    }
 
     if (status && status !== 'all') {
       conditions.push(`l.status = $${idx++}`);
@@ -155,9 +149,10 @@ export const adminLeadsRepository = {
         values.push(assigned_to);
       }
     }
-    if (tag_id) {
-      conditions.push(`l.id IN (SELECT lead_id FROM connect.lead_tags WHERE tag_id = ${idx++})`);
-      values.push(tag_id);
+    const filterTags = tags || (tag_id ? [tag_id] : null);
+    if (filterTags && filterTags.length > 0) {
+      conditions.push(`l.id IN (SELECT lead_id FROM connect.lead_tags WHERE tag_id = ANY($${idx++}))`);
+      values.push(filterTags);
     }
     if (search) {
       conditions.push(`(
@@ -193,7 +188,7 @@ export const adminLeadsRepository = {
         u.employee_id AS assigned_bdm_employee_id,
         a.name AS account_name,
         (
-          SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'type', t.type, 'color_hex', t.color_hex))
+          SELECT COALESCE(json_agg(json_build_object('id', t.id, 'name', t.name, 'type', t.type, 'color_hex', t.color_hex)), '[]'::json)
           FROM connect.lead_tags lt
           JOIN connect.tags t ON lt.tag_id = t.id
           WHERE lt.lead_id = l.id
@@ -228,94 +223,132 @@ export const adminLeadsRepository = {
    * Create lead
    */
   async create(data, creatorUserId) {
-    let creator = creatorUserId;
-    if (!creator) {
-      const { rows } = await db.query("SELECT id FROM connect.users WHERE role = 'admin' LIMIT 1");
-      creator = rows[0]?.id;
+    const client = await db.connect();
+    try {
+      await client.query('BEGIN');
+      
+      let creator = creatorUserId;
+      if (!creator) {
+        const { rows } = await client.query("SELECT id FROM connect.users WHERE role = 'admin' LIMIT 1");
+        creator = rows[0]?.id;
+      }
+
+      const query = `
+        INSERT INTO connect.leads (
+          name, company_name, account_id, phone, email, city, state,
+          source, sub_requirement, deal_type, assigned_to,
+          status, priority, budget, expected_value, won_amount,
+          next_followup_date, created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+        RETURNING *
+      `;
+      const values = [
+        data.name,
+        data.company_name || data.name,
+        data.account_id || null,
+        data.phone,
+        data.email || null,
+        data.city || null,
+        data.state || null,
+        data.source || 'website',
+        data.sub_requirement || data.notes || null,
+        data.deal_type || 'new_business',
+        data.assigned_to || null,
+        data.status || 'new',
+        data.priority || 'medium',
+        data.budget || 0,
+        data.expected_value || 0,
+        data.won_amount || 0,
+        data.next_followup_date || null,
+        creator
+      ];
+
+      const { rows } = await client.query(query, values);
+      const lead = rows[0];
+
+      // Insert tags
+      const tagIds = data.tag_ids || (data.tag_id ? [data.tag_id] : []);
+      if (tagIds.length > 0) {
+        for (const tid of tagIds) {
+          await client.query(`INSERT INTO connect.lead_tags (lead_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [lead.id, tid]);
+        }
+      } else {
+        // Fallback: pick first active tag
+        const { rows: tags } = await client.query('SELECT id FROM connect.tags WHERE is_active = true ORDER BY name ASC LIMIT 1');
+        if (tags[0]?.id) {
+           await client.query(`INSERT INTO connect.lead_tags (lead_id, tag_id) VALUES ($1, $2)`, [lead.id, tags[0].id]);
+        }
+      }
+
+      await client.query('COMMIT');
+      return lead;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
     }
-
-    const query = `
-      INSERT INTO connect.leads (
-        name, company_name, account_id, phone, email, city, state,
-        source, sub_requirement, deal_type, assigned_to,
-        status, priority, budget, expected_value, won_amount,
-        next_followup_date, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
-      RETURNING *
-    `;
-    const values = [
-      data.name,
-      data.company_name || data.name,
-      data.account_id || null,
-      data.phone,
-      data.email || null,
-      data.city || null,
-      data.state || null,
-      data.source || 'website',
-      data.sub_requirement || data.notes || null,
-      data.deal_type || 'new_business',
-      data.assigned_to || null,
-      data.status || 'new',
-      data.priority || 'medium',
-      data.budget || 0,
-      data.expected_value || 0,
-      data.won_amount || 0,
-      data.next_followup_date || null,
-      creator
-    ];
-
-    const { rows } = await db.query(query, values);
-    const lead = rows[0];
-
-    // Insert tags into junction table
-    const tagIds = data.tag_ids && data.tag_ids.length > 0 ? data.tag_ids : (data.tag_id ? [data.tag_id] : []);
-    if (tagIds.length === 0) {
-      // Fallback: assign first active tag
-      const tagRes = await db.query('SELECT id FROM connect.tags WHERE is_active = true ORDER BY name ASC LIMIT 1');
-      if (tagRes.rows[0]) tagIds.push(tagRes.rows[0].id);
-    }
-    for (const tid of tagIds) {
-      await db.query('INSERT INTO connect.lead_tags (lead_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [lead.id, tid]);
-    }
-
-    return lead;
   },
 
   /**
    * Update lead info
    */
   async update(id, data) {
-    const fields = [];
-    const values = [];
-    let idx = 1;
+    const client = await db.connect();
+    try {
+      await client.query('BEGIN');
+      
+      const fields = [];
+      const values = [];
+      let idx = 1;
 
-    const allowedFields = [
-      'name', 'company_name', 'account_id', 'phone', 'email', 'city', 'state',
-      'source', 'tag_id', 'sub_requirement', 'deal_type', 'assigned_to',
-      'status', 'priority', 'budget', 'expected_value', 'won_amount',
-      'next_followup_date', 'lost_reason', 'invalid_reason'
-    ];
+      const allowedFields = [
+        'name', 'company_name', 'account_id', 'phone', 'email', 'city', 'state',
+        'source', 'sub_requirement', 'deal_type', 'assigned_to',
+        'status', 'priority', 'budget', 'expected_value', 'won_amount',
+        'next_followup_date', 'lost_reason', 'invalid_reason'
+      ];
 
-    for (const field of allowedFields) {
-      if (data[field] !== undefined) {
-        fields.push(`${field} = $${idx++}`);
-        values.push(data[field]);
+      for (const field of allowedFields) {
+        if (data[field] !== undefined) {
+          fields.push(`${field} = $${idx++}`);
+          values.push(data[field]);
+        }
       }
+
+      if (fields.length > 0) {
+        fields.push(`updated_at = NOW()`);
+        values.push(id);
+        const query = `
+          UPDATE connect.leads
+          SET ${fields.join(', ')}
+          WHERE id = $${idx}
+        `;
+        await client.query(query, values);
+      }
+
+      if (data.tag_ids !== undefined) {
+        await client.query(`DELETE FROM connect.lead_tags WHERE lead_id = $1`, [id]);
+        const tagIds = Array.isArray(data.tag_ids) ? data.tag_ids : (data.tag_ids ? [data.tag_ids] : []);
+        for (const tid of tagIds) {
+          await client.query(`INSERT INTO connect.lead_tags (lead_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [id, tid]);
+        }
+      } else if (data.tag_id !== undefined) { // legacy compatibility
+        await client.query(`DELETE FROM connect.lead_tags WHERE lead_id = $1`, [id]);
+        if (data.tag_id) {
+          await client.query(`INSERT INTO connect.lead_tags (lead_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [id, data.tag_id]);
+        }
+      }
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
     }
-
-    if (fields.length === 0) return await this.findById(id);
-
-    fields.push(`updated_at = NOW()`);
-    values.push(id);
-
-    const query = `
-      UPDATE connect.leads
-      SET ${fields.join(', ')}
-      WHERE id = $${idx}
-      RETURNING *
-    `;
-    const { rows } = await db.query(query, values);
-    return rows[0];
+    
+    return await this.findById(id);
   },
 
   /**
@@ -360,6 +393,18 @@ export const adminLeadsRepository = {
   /**
    * Bulk assign leads to a BDM
    */
+  
+  /**
+   * Bulk delete leads
+   */
+  async bulkDelete(leadIds) {
+    const { rowCount } = await db.query(
+      `DELETE FROM connect.leads WHERE id = ANY($1::uuid[])`,
+      [leadIds]
+    );
+    return rowCount;
+  }
+
   async bulkAssign(leadIds, assignedTo, adminUserId) {
     const client = await db.connect();
     try {
@@ -420,7 +465,16 @@ export const adminLeadsRepository = {
             creatorUserId || null
           ]
         );
-        inserted.push(rows[0]);
+        const newLead = rows[0];
+        
+        // Handle multiple tags
+        if (lead.tag_ids && lead.tag_ids.length > 0) {
+          for (const tid of lead.tag_ids) {
+            await client.query(`INSERT INTO connect.lead_tags (lead_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [newLead.id, tid]);
+          }
+        }
+        
+        inserted.push(newLead);
       }
       await client.query('COMMIT');
       return inserted;
@@ -452,40 +506,5 @@ export const adminLeadsRepository = {
       [brdUrl, id]
     );
     return rows[0] || null;
-  },
-
-  /**
-   * Manage tags for multiple leads
-   */
-  async bulkTags(leadIds, tagsToAdd = [], tagsToRemove = []) {
-    const client = await db.connect();
-    try {
-      await client.query('BEGIN');
-      
-      for (const leadId of leadIds) {
-        if (tagsToRemove && tagsToRemove.length > 0) {
-          await client.query(
-            'DELETE FROM connect.lead_tags WHERE lead_id = $1 AND tag_id = ANY($2::uuid[])',
-            [leadId, tagsToRemove]
-          );
-        }
-        if (tagsToAdd && tagsToAdd.length > 0) {
-          for (const tagId of tagsToAdd) {
-            await client.query(
-              'INSERT INTO connect.lead_tags (lead_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-              [leadId, tagId]
-            );
-          }
-        }
-      }
-
-      await client.query('COMMIT');
-      return { success: true, count: leadIds.length };
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
-    }
   }
 };

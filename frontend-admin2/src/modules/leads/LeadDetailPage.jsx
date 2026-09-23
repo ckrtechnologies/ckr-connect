@@ -11,6 +11,8 @@ import MarkLostModal from './components/MarkLostModal.jsx';
 import DeleteLeadModal from './components/DeleteLeadModal.jsx';
 import UserAvatarMenu from '../../core/components/UserAvatarMenu.jsx';
 import { toast } from '../../core/components/Toast.jsx';
+import MultiSelectDropdown from '../../core/components/MultiSelectDropdown.jsx';
+import DateTimePicker from '../../core/components/DateTimePicker.jsx';
 
 const STAGE_PROBABILITIES = {
   new: 10,
@@ -50,7 +52,7 @@ export default function LeadDetailPage() {
   const lead = rawData?.lead || rawData;
   const interactions = rawData?.interactions || [];
   const assignedBdm = Array.isArray(bdms) ? bdms.find((u) => u.id === lead?.assigned_to) : null;
-  const tag = Array.isArray(tags) ? tags.find((t) => t.id === lead?.tag_id) : null;
+  const leadTags = lead?.tags || [];
   const account = Array.isArray(accountsList) ? accountsList.find((a) => a.id === lead?.account_id) : null;
 
   const leadDocuments = Array.isArray(lead?.documents)
@@ -67,15 +69,23 @@ export default function LeadDetailPage() {
     email: '',
     state: '',
     city: '',
-    tag_id: '',
+    tag_ids: [],
     deal_type: 'new_business',
     expected_value: 0,
     won_amount: 0,
     sub_requirement: '',
+    next_followup_date: '',
   });
 
   useEffect(() => {
     if (lead) {
+      const toLocalDatetimeString = (dateStr) => {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        const tzOffset = d.getTimezoneOffset() * 60000;
+        return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+      };
+
       setFormData({
         name: lead.name || '',
         company_name: lead.company_name || '',
@@ -83,11 +93,12 @@ export default function LeadDetailPage() {
         email: lead.email || '',
         state: lead.state || '',
         city: lead.city || '',
-        tag_id: lead.tag_id || (tags[0]?.id || ''),
+        tag_ids: lead.tags?.map(t => t.id) || [],
         deal_type: lead.deal_type || 'new_business',
         expected_value: lead.expected_value || lead.budget || 0,
         won_amount: lead.won_amount || 0,
         sub_requirement: lead.sub_requirement || lead.notes || '',
+        next_followup_date: toLocalDatetimeString(lead.next_followup_date),
       });
     }
   }, [lead, tags]);
@@ -99,7 +110,11 @@ export default function LeadDetailPage() {
   const handleSaveLead = async () => {
     try {
       setIsSaving(true);
-      await leadsApi.updateLead(lead.id, formData);
+      const payload = {
+        ...formData,
+        next_followup_date: formData.next_followup_date ? new Date(formData.next_followup_date).toISOString() : null,
+      };
+      await leadsApi.updateLead(lead.id, payload);
       toast.success('Lead details saved successfully');
       refetch();
     } catch (err) {
@@ -113,6 +128,11 @@ export default function LeadDetailPage() {
     try {
       if (newStage === 'won') {
         setIsWonModalOpen(true);
+        return;
+      }
+      const terminalStages = ['won', 'lost', 'invalid'];
+      if (!terminalStages.includes(newStage) && !formData.next_followup_date) {
+        toast.error('Please set and save a Next Follow-up Date/Time before advancing to this stage');
         return;
       }
       await leadsApi.updateLeadStatus(lead.id, {
@@ -412,6 +432,13 @@ export default function LeadDetailPage() {
                           onChange={(e) => handleFieldChange('city', e.target.value)}
                         />
                       </div>
+                      <div className="form-field-group">
+                        <label className="form-field-label">Next Follow-up Date/Time</label>
+                        <DateTimePicker
+                          value={formData.next_followup_date}
+                          onChange={(val) => handleFieldChange('next_followup_date', val)}
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -421,17 +448,12 @@ export default function LeadDetailPage() {
                     <div className="form-fields-grid">
                       <div className="form-field-group">
                         <label className="form-field-label">Product / Service Offering</label>
-                        <select
-                          className="form-field-select"
-                          value={formData.tag_id}
-                          onChange={(e) => handleFieldChange('tag_id', e.target.value)}
-                        >
-                          {(tags || []).map((t) => (
-                            <option key={t.id} value={t.id}>
-                              {t.name}
-                            </option>
-                          ))}
-                        </select>
+                        <MultiSelectDropdown 
+                          options={(tags || []).map(t => ({ label: t.name, value: t.id }))}
+                          value={formData.tag_ids || []}
+                          onChange={(values) => handleFieldChange('tag_ids', values)}
+                          placeholder="Select tags..."
+                        />
                       </div>
                       <div className="form-field-group">
                         <label className="form-field-label">Deal Type</label>

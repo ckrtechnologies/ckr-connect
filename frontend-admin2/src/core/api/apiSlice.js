@@ -109,6 +109,14 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Lead', id }],
     }),
+    bulkDeleteLeads: builder.mutation({
+      query: (lead_ids) => ({
+        url: '/admin/leads/bulk-delete',
+        method: 'POST',
+        body: { lead_ids },
+      }),
+      invalidatesTags: ['Leads'],
+    }),
     bulkAssignLeads: builder.mutation({
       query: ({ lead_ids, bdm_id }) => ({
         url: '/admin/leads/bulk-assign',
@@ -116,6 +124,14 @@ export const apiSlice = createApi({
         body: { lead_ids, bdm_id },
       }),
       invalidatesTags: ['Leads', 'Dashboard', 'Staff'],
+    }),
+    bulkTagLeads: builder.mutation({
+      query: ({ lead_ids, tags_to_add, tags_to_remove }) => ({
+        url: '/admin/leads/bulk-tags',
+        method: 'POST',
+        body: { lead_ids, tags_to_add, tags_to_remove },
+      }),
+      invalidatesTags: ['Leads'],
     }),
     importCsv: builder.mutation({
       query: (formData) => ({
@@ -294,6 +310,7 @@ export const {
   useUpdateLeadStatusMutation,
   useUploadBrdMutation,
   useBulkAssignLeadsMutation,
+  useBulkTagLeadsMutation,
   useImportCsvMutation,
   useAddInteractionMutation,
   useGetStaffQuery,

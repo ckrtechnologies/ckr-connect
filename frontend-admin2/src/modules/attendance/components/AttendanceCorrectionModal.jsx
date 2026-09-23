@@ -30,7 +30,7 @@ export default function AttendanceCorrectionModal({ isOpen, cellData, onClose, o
 
   const [checkInTime, setCheckInTime] = useState(formatTimeVal(cellData?.punch_in || cellData?.check_in_time));
   const [checkOutTime, setCheckOutTime] = useState(formatTimeVal(cellData?.punch_out || cellData?.check_out_time));
-  const [remarks, setRemarks] = useState('');
+  const [remarks, setRemarks] = useState(cellData?.correction_reason || cellData?.remarks || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen || !cellData) return null;

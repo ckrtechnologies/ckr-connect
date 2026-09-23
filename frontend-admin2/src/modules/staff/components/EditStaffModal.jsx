@@ -12,6 +12,7 @@ export default function EditStaffModal({ isOpen, staff, onClose, onSuccess }) {
     target_amount: 0,
     status: 'active',
     is_active: true,
+    date_of_joining: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -26,6 +27,7 @@ export default function EditStaffModal({ isOpen, staff, onClose, onSuccess }) {
         target_amount: staff.target_amount ?? 500000,
         status: staff.status || 'active',
         is_active: staff.is_active !== undefined ? staff.is_active : true,
+        date_of_joining: staff.date_of_joining ? new Date(staff.date_of_joining).toISOString().slice(0, 10) : '',
       });
     }
   }, [staff]);
@@ -50,6 +52,7 @@ export default function EditStaffModal({ isOpen, staff, onClose, onSuccess }) {
         target_amount: Number(formData.target_amount) || 0,
         status: formData.status,
         is_active: formData.is_active,
+        date_of_joining: formData.date_of_joining || undefined,
       };
 
       await staffApi.updateStaff(staff.id, payload);
@@ -122,7 +125,7 @@ export default function EditStaffModal({ isOpen, staff, onClose, onSuccess }) {
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               >
-                <option value="bdm">BDM (Field Sales)</option>
+                <option value="bdm">BDM</option>
                 <option value="telecaller">Telecaller</option>
                 <option value="manager">Sales Manager</option>
                 <option value="admin">Administrator</option>
@@ -148,6 +151,16 @@ export default function EditStaffModal({ isOpen, staff, onClose, onSuccess }) {
                 className="form-field-input"
                 value={formData.target_amount}
                 onChange={(e) => setFormData({ ...formData, target_amount: e.target.value })}
+              />
+            </div>
+
+            <div className="form-field-group">
+              <label className="form-field-label">Date of Joining</label>
+              <input
+                type="date"
+                className="form-field-input"
+                value={formData.date_of_joining}
+                onChange={(e) => setFormData({ ...formData, date_of_joining: e.target.value })}
               />
             </div>
 

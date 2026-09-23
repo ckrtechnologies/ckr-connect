@@ -8,7 +8,8 @@ export const createStaffSchema = z.object({
   role: z.enum(['admin', 'bdm', 'telecaller', 'manager']).default('bdm'),
   designation: z.string().optional(),
   target_amount: z.number().nonnegative().optional().default(0),
-  temp_password: z.string().min(6).optional().default('password@1')
+  temp_password: z.string().min(6).optional().default('password@1'),
+  date_of_joining: z.string().optional()
 });
 
 export const updateStaffSchema = z.object({
@@ -19,7 +20,8 @@ export const updateStaffSchema = z.object({
   designation: z.string().optional(),
   target_amount: z.number().nonnegative().optional(),
   is_active: z.boolean().optional(),
-  status: z.enum(['active', 'inactive', 'suspended']).optional()
+  status: z.enum(['active', 'inactive', 'suspended']).optional(),
+  date_of_joining: z.string().optional()
 });
 
 export const resetPasswordSchema = z.object({

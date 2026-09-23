@@ -11,6 +11,7 @@ export default function AddStaffModal({ isOpen, onClose, onSuccess }) {
     role: 'bdm',
     designation: 'Business Development Manager',
     target_amount: 500000,
+    date_of_joining: '',
     temp_password: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -27,6 +28,7 @@ export default function AddStaffModal({ isOpen, onClose, onSuccess }) {
       role: 'bdm',
       designation: 'Business Development Manager',
       target_amount: 500000,
+      date_of_joining: '',
       temp_password: '',
     });
     setCreatedPassword(null);
@@ -54,6 +56,7 @@ export default function AddStaffModal({ isOpen, onClose, onSuccess }) {
         role: formData.role,
         designation: formData.designation.trim() || undefined,
         target_amount: Number(formData.target_amount) || 0,
+        date_of_joining: formData.date_of_joining || undefined,
         temp_password: formData.temp_password.trim() || undefined,
       };
 
@@ -160,7 +163,7 @@ export default function AddStaffModal({ isOpen, onClose, onSuccess }) {
                     setFormData({ ...formData, role, designation: defaultDesignation });
                   }}
                 >
-                  <option value="bdm">BDM (Field Sales)</option>
+                  <option value="bdm">BDM</option>
                   <option value="telecaller">Telecaller</option>
                   <option value="manager">Sales Manager</option>
                   <option value="admin">Administrator</option>
@@ -198,6 +201,16 @@ export default function AddStaffModal({ isOpen, onClose, onSuccess }) {
                   className="form-field-input"
                   value={formData.target_amount}
                   onChange={(e) => setFormData({ ...formData, target_amount: e.target.value })}
+                />
+              </div>
+
+              <div className="form-field-group">
+                <label className="form-field-label">Date of Joining</label>
+                <input
+                  type="date"
+                  className="form-field-input"
+                  value={formData.date_of_joining}
+                  onChange={(e) => setFormData({ ...formData, date_of_joining: e.target.value })}
                 />
               </div>
 

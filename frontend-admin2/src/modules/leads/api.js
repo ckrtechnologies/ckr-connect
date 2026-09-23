@@ -8,6 +8,8 @@ export const leadsApi = {
   deleteLead: (id) => apiClient.delete(`/admin/leads/${id}`),
   updateLeadStatus: (id, payload) =>
     apiClient.patch(`/admin/leads/${id}/status`, typeof payload === 'string' ? { status: payload } : payload),
+  bulkDelete: (lead_ids) =>
+    apiClient.post('/admin/leads/bulk-delete', { lead_ids }),
   bulkAssign: (lead_ids, assigned_to) =>
     apiClient.post('/admin/leads/bulk-assign', { lead_ids, assigned_to, bdm_id: assigned_to }),
   uploadBrd: (id, formData) =>

@@ -29,14 +29,31 @@ export default function ImportCsvModal({ isOpen, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fluent-modal-overlay">
-      <div className="fluent-modal-container" style={{ maxWidth: '500px' }}>
-        <div className="fluent-modal-header">
-          <h2 className="fluent-modal-title">Bulk Import Leads</h2>
-          <button type="button" className="fluent-modal-close" onClick={onClose}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
-            </svg>
+    <div
+      className="fluent-dialog-backdrop open"
+      onClick={onClose}
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}
+    >
+      <div
+        className="fluent-dialog-box"
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: '500px', maxWidth: '92vw', padding: '20px' }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottom: '1px solid var(--color-border)',
+            paddingBottom: '12px',
+            marginBottom: '16px',
+          }}
+        >
+          <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0 }}>
+            Bulk Import Leads
+          </h2>
+          <button className="icon-btn-utility" onClick={onClose} title="Close">
+            ✕
           </button>
         </div>
 
@@ -48,8 +65,8 @@ export default function ImportCsvModal({ isOpen, onClose, onSuccess }) {
 
             <div style={{ marginBottom: '20px' }}>
               <a 
-                href="/sample_leads_import.csv" 
-                download 
+                href={`${import.meta.env.BASE_URL}sample_leads_import.csv`}
+                download="sample_leads_import.csv"
                 style={{ color: 'var(--color-brand-primary)', textDecoration: 'none', fontSize: '13px', fontWeight: '500' }}
               >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style={{ verticalAlign: 'text-bottom', marginRight: '4px' }}>
@@ -72,11 +89,20 @@ export default function ImportCsvModal({ isOpen, onClose, onSuccess }) {
             </div>
           </div>
 
-          <div className="fluent-modal-footer">
-            <button type="button" className="fluent-btn-default" onClick={onClose} disabled={isLoading}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '8px',
+              borderTop: '1px solid var(--color-border)',
+              paddingTop: '14px',
+              marginTop: '16px',
+            }}
+          >
+            <button type="button" className="fluent-btn fluent-btn-secondary" onClick={onClose} disabled={isLoading}>
               Cancel
             </button>
-            <button type="submit" className="fluent-btn-primary" disabled={isLoading || !file}>
+            <button type="submit" className="fluent-btn fluent-btn-primary" disabled={isLoading || !file}>
               {isLoading ? 'Importing...' : 'Upload & Import'}
             </button>
           </div>

@@ -95,6 +95,7 @@ export default function AttendancePage() {
       status: statusToShort(dayRecord?.status || 'absent'),
       check_in_time: dayRecord?.punch_in || '',
       check_out_time: dayRecord?.punch_out || '',
+      correction_reason: dayRecord?.correction_reason || '',
     });
   };
 

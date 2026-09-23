@@ -1,4 +1,7 @@
-// Declarative Navigation Registry for CKR Connect Admin Portal
+const fs = require('fs');
+const file = '/Users/chandanmallik/projects/ckrcrm/frontend-admin2/src/core/config/navigation.js';
+
+const newNav = `// Declarative Navigation Registry for CKR Connect Admin Portal
 // Exactly matching Approved Prototype v0.1 (prototype/app.js lines 944-1000)
 
 export const NAVIGATION_SECTIONS = [
@@ -115,3 +118,6 @@ export const NAVIGATION_SECTIONS = [
     ],
   },
 ];
+`;
+
+fs.writeFileSync(file, newNav);

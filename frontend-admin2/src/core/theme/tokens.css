@@ -54,11 +54,11 @@
   --ease-accelerate: cubic-bezier(0.7, 0, 1, 0.5);
 
   /* Dimensions */
-  --command-bar-height: 48px;
-  --grid-row-height: 40px;
-  --sitemap-width: 240px;
-  --sitemap-collapsed-width: 48px;
+  --command-bar-height: 40px;
+  --grid-row-height: 32px;
+  --sitemap-width: 210px;
+  --sitemap-collapsed-width: 40px;
   --quick-create-width: 520px;
-  --app-bar-height: 48px;
-  --bottom-nav-height: 56px;
+  --app-bar-height: 40px;
+  --bottom-nav-height: 48px;
 }

@@ -8,6 +8,7 @@ export const bdmLeadsRepository = {
     const {
       status,
       tag_id,
+      tags,
       search,
       page = 1,
       limit = 25,
@@ -24,9 +25,10 @@ export const bdmLeadsRepository = {
       values.push(status);
     }
 
-    if (tag_id) {
-      conditions.push(`l.tag_id = $${idx++}`);
-      values.push(tag_id);
+    const filterTags = tags || (tag_id ? [tag_id] : null);
+    if (filterTags && filterTags.length > 0) {
+      conditions.push(`l.id IN (SELECT lead_id FROM connect.lead_tags WHERE tag_id = ANY($${idx++}))`);
+      values.push(filterTags);
     }
 
     if (search) {
@@ -57,9 +59,6 @@ export const bdmLeadsRepository = {
         l.city,
         l.state,
         l.source,
-        l.tag_id,
-        t.name AS tag_name,
-        t.type AS tag_type,
         l.deal_type,
         l.status,
         l.priority,
@@ -75,6 +74,12 @@ export const bdmLeadsRepository = {
         l.created_at,
         l.updated_at,
         (
+          SELECT COALESCE(json_agg(json_build_object('id', t.id, 'name', t.name, 'type', t.type, 'color_hex', t.color_hex)), '[]'::json)
+          FROM connect.lead_tags lt
+          JOIN connect.tags t ON lt.tag_id = t.id
+          WHERE lt.lead_id = l.id
+        ) AS tags,
+        (
           SELECT json_build_object(
             'type', i.type,
             'call_result', i.call_result,
@@ -87,7 +92,6 @@ export const bdmLeadsRepository = {
           LIMIT 1
         ) AS latest_interaction
       FROM connect.leads l
-      LEFT JOIN connect.tags t ON l.tag_id = t.id
       ${whereClause}
       ORDER BY ${sortField} ${sortDir}
       LIMIT $${idx++} OFFSET $${idx++}
@@ -102,7 +106,7 @@ export const bdmLeadsRepository = {
    * Count total leads strictly assigned to this BDM
    */
   async countAssignedLeads(bdmId, filters = {}) {
-    const { status, tag_id, search } = filters;
+    const { status, tag_id, tags, search } = filters;
     const conditions = ['l.assigned_to = $1'];
     const values = [bdmId];
     let idx = 2;
@@ -111,9 +115,10 @@ export const bdmLeadsRepository = {
       conditions.push(`l.status = $${idx++}`);
       values.push(status);
     }
-    if (tag_id) {
-      conditions.push(`l.tag_id = $${idx++}`);
-      values.push(tag_id);
+    const filterTags = tags || (tag_id ? [tag_id] : null);
+    if (filterTags && filterTags.length > 0) {
+      conditions.push(`l.id IN (SELECT lead_id FROM connect.lead_tags WHERE tag_id = ANY($${idx++}))`);
+      values.push(filterTags);
     }
     if (search) {
       conditions.push(`(
@@ -145,11 +150,14 @@ export const bdmLeadsRepository = {
       SELECT 
         l.*,
         a.name AS account_name,
-        t.name AS tag_name,
-        t.type AS tag_type
+        (
+          SELECT COALESCE(json_agg(json_build_object('id', t.id, 'name', t.name, 'type', t.type, 'color_hex', t.color_hex)), '[]'::json)
+          FROM connect.lead_tags lt
+          JOIN connect.tags t ON lt.tag_id = t.id
+          WHERE lt.lead_id = l.id
+        ) AS tags
       FROM connect.leads l
       LEFT JOIN connect.accounts a ON l.account_id = a.id
-      LEFT JOIN connect.tags t ON l.tag_id = t.id
       WHERE l.id = $1 AND l.assigned_to = $2
     `;
     const { rows } = await db.query(query, [id, bdmId]);

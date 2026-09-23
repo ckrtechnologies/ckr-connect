@@ -11,6 +11,7 @@ export const createLeadSchema = z.object({
   state: z.string().nullable().optional().or(z.literal('')),
   source: z.string().optional().default('website'),
   tag_id: z.string().nullable().optional().or(z.literal('')),
+  tag_ids: z.array(z.string()).optional(),
   sub_requirement: z.string().nullable().optional().or(z.literal('')),
   deal_type: z.string().optional().default('new_business'),
   assigned_to: z.string().nullable().optional().or(z.literal('')),
@@ -38,4 +39,14 @@ export const bulkAssignSchema = z.object({
 }).refine((data) => data.assigned_to || data.bdm_id, {
   message: 'Assigned BDM ID is required',
   path: ['assigned_to']
+});
+
+export const bulkDeleteSchema = z.object({
+  lead_ids: z.array(z.string().uuid()).min(1, 'At least one lead ID is required')
+});
+
+export const bulkTagsSchema = z.object({
+  lead_ids: z.array(z.string().uuid()).min(1, "At least one lead is required"),
+  tags_to_add: z.array(z.string().uuid()).optional(),
+  tags_to_remove: z.array(z.string().uuid()).optional()
 });

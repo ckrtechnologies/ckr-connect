@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useBootstrap } from '../../../core/context/BootstrapContext.jsx';
 import leadsApi from '../api.js';
 import { toast } from '../../../core/components/Toast.jsx';
+import DateTimePicker from '../../../core/components/DateTimePicker.jsx';
 
 export default function LogInteractionModal({ isOpen, leadId, leadName, onClose, onSuccess }) {
   const { bdms } = useBootstrap();
@@ -32,7 +33,7 @@ export default function LogInteractionModal({ isOpen, leadId, leadName, onClose,
         call_result: outcome,
         notes: notes.trim(),
         next_action: nextAction.trim() || undefined,
-        next_followup_date: nextFollowupDate || undefined,
+        next_followup_date: nextFollowupDate ? new Date(nextFollowupDate).toISOString() : undefined,
         bdm_id: bdmId || undefined,
       });
 
@@ -180,11 +181,9 @@ export default function LogInteractionModal({ isOpen, leadId, leadName, onClose,
             {/* Next Follow-up Date */}
             <div className="form-field-group">
               <label className="form-field-label">Next Follow-up (Date & Time)</label>
-              <input
-                type="datetime-local"
-                className="form-field-input"
+              <DateTimePicker
                 value={nextFollowupDate}
-                onChange={(e) => setNextFollowupDate(e.target.value)}
+                onChange={setNextFollowupDate}
               />
             </div>
           </div>

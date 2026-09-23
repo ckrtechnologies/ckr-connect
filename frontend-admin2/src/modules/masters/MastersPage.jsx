@@ -176,7 +176,7 @@ export default function MastersPage() {
                       <td style={{ display: 'flex', gap: '4px' }}>
                         <button
                           className="fluent-btn fluent-btn-secondary"
-                          style={{ height: '22px', fontSize: '10px' }}
+                          style={{ height: '22px', fontSize: '10px', color: 'var(--color-text-primary)' }}
                           onClick={() => handleEditTag(t)}
                         >
                           ✎ Edit

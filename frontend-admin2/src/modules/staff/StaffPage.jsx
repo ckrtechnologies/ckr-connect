@@ -176,6 +176,7 @@ export default function StaffPage() {
                   <th>Designation</th>
                   <th>Work Email</th>
                   <th>Phone Number</th>
+                  <th>Joining Date</th>
                   <th>Active Leads</th>
                   <th>Monthly Quota</th>
                   <th>Status</th>
@@ -232,6 +233,11 @@ export default function StaffPage() {
                       </td>
                       <td>{u.email}</td>
                       <td>{u.phone || '—'}</td>
+                      <td>
+                        <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                          {u.date_of_joining ? new Date(u.date_of_joining).toLocaleDateString('en-IN') : 'Not Set'}
+                        </span>
+                      </td>
                       <td>
                         <strong>{u.active_leads_count ?? 0}</strong>
                       </td>

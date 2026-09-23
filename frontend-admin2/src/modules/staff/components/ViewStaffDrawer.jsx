@@ -183,8 +183,12 @@ export default function ViewStaffDrawer({
                 <div style={{ fontSize: '13px' }}>{staff.department || 'Sales & Field Operations'}</div>
               </div>
               <div>
-                <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>Member Since</div>
+                <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>Member Since (System)</div>
                 <div style={{ fontSize: '13px' }}>{formatDate(staff.created_at)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>Date of Joining</div>
+                <div style={{ fontSize: '13px', fontWeight: 500 }}>{staff.date_of_joining ? formatDate(staff.date_of_joining) : 'Not recorded'}</div>
               </div>
             </div>
           </div>

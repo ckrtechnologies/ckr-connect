@@ -15,8 +15,8 @@ export default function DeleteLeadModal({ isOpen, leadIds = [], leadNames = '', 
       if (count === 1) {
         await leadsApi.deleteLead(leadIds[0]);
       } else {
-        // Bulk delete sequentially
-        await Promise.all(leadIds.map((id) => leadsApi.deleteLead(id)));
+        // Bulk delete in one request
+        await leadsApi.bulkDelete(leadIds);
       }
       toast.success(count === 1 ? 'Lead deleted successfully' : `${count} leads deleted successfully`);
       if (onSuccess) onSuccess();

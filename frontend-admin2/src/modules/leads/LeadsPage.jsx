@@ -7,7 +7,9 @@ import DateSlicePicker from '../../core/layout/DateSlicePicker.jsx';
 import QuickCreateDrawer from './components/QuickCreateDrawer.jsx';
 import ImportCsvModal from './components/ImportCsvModal.jsx';
 import BulkAssignModal from './components/BulkAssignModal.jsx';
+import BulkTagModal from './components/BulkTagModal.jsx';
 import DeleteLeadModal from './components/DeleteLeadModal.jsx';
+import LeadFilterPanel from './components/LeadFilterPanel.jsx';
 import UserAvatarMenu from '../../core/components/UserAvatarMenu.jsx';
 import { toast } from '../../core/components/Toast.jsx';
 
@@ -20,9 +22,11 @@ export default function LeadsPage() {
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false);
+  const [isBulkTagOpen, setIsBulkTagOpen] = useState(false);
   const [leadToDelete, setLeadToDelete] = useState(null);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
   // Filters initialized from URL search params
   const initialStatus = searchParams.get('status') || searchParams.get('stage') || searchParams.get('filter') || '';
@@ -32,7 +36,10 @@ export default function LeadsPage() {
   const [bdmFilter, setBdmFilter] = useState(initialBdm);
   const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [advancedFilters, setAdvancedFilters] = useState({ search: searchQuery, status: statusFilter, assigned_to: bdmFilter, tag_ids: [] });
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   useEffect(() => {
     const s = searchParams.get('status') || searchParams.get('stage') || searchParams.get('filter');
@@ -44,7 +51,7 @@ export default function LeadsPage() {
   }, [searchParams]);
 
   // Backend queries
-  const { data: leadsData, isLoading: leadsLoading, refetch } = useGetLeadsQuery();
+  const { data: leadsData, isLoading: leadsLoading, refetch } = useGetLeadsQuery({ limit: 100000 });
   const { data: usersData } = useGetStaffQuery();
   const { data: tagsData } = useGetTagsQuery();
 
@@ -82,6 +89,12 @@ export default function LeadsPage() {
       } else if (statusFilter && l.status !== statusFilter) {
         return false;
       }
+      if (advancedFilters.tag_ids && advancedFilters.tag_ids.length > 0) {
+        if (!l.tags || l.tags.length === 0) return false;
+        const leadTagIds = l.tags.map(t => t.id);
+        const hasAllTags = advancedFilters.tag_ids.every(id => leadTagIds.includes(id));
+        if (!hasAllTags) return false;
+      }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchName = (l.name || '').toLowerCase().includes(q);
@@ -91,7 +104,18 @@ export default function LeadsPage() {
       }
       return true;
     });
-  }, [allLeads, bdmFilter, statusFilter, searchQuery]);
+  }, [allLeads, bdmFilter, statusFilter, searchQuery, advancedFilters.tag_ids]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [bdmFilter, statusFilter, searchQuery, advancedFilters]);
+
+  // Paginate leads
+  const paginatedLeads = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredLeads.slice(start, start + pageSize);
+  }, [filteredLeads, currentPage, pageSize]);
 
   // Selection handlers
   const handleSelectAll = (checked) => {
@@ -168,17 +192,7 @@ export default function LeadsPage() {
               New Lead
             </button>
 
-            <button
-              className="fluent-btn-command"
-              id="cmd-bulk-upload"
-              onClick={() => setIsCsvImportOpen(true)}
-            >
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
-                <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V10.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z" />
-              </svg>
-              Bulk upload
-            </button>
+
 
             {selectedIds.size > 0 && (
               <>
@@ -195,6 +209,16 @@ export default function LeadsPage() {
                 </button>
                 <button
                   className="fluent-btn-command"
+                  id="cmd-manage-tags"
+                  onClick={() => setIsBulkTagOpen(true)}
+                >
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M2.5 1A1.5 1.5 0 0 0 1 2.5v3.172a1.5 1.5 0 0 0 .44 1.06l6.828 6.829a1.5 1.5 0 0 0 2.122 0l3.172-3.172a1.5 1.5 0 0 0 0-2.122L6.732 1.44A1.5 1.5 0 0 0 5.672 1H2.5zM3.5 4a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1z" />
+                  </svg>
+                  Manage Tags ({selectedIds.size})
+                </button>
+                <button
+                  className="fluent-btn-command"
                   style={{ color: 'var(--color-error)' }}
                   id="cmd-delete-selected"
                   onClick={() => setIsBulkDeleteOpen(true)}
@@ -208,13 +232,7 @@ export default function LeadsPage() {
               </>
             )}
 
-            <button
-              className="fluent-btn-command"
-              id="cmd-export-leads"
-              onClick={handleExportCsv}
-            >
-              Export
-            </button>
+
             <button
               className="fluent-btn-command"
               id="cmd-import-leads"
@@ -224,7 +242,7 @@ export default function LeadsPage() {
                 <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
                 <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z" />
               </svg>
-              Import CSV
+              Bulk Import
             </button>
           </div>
         </div>
@@ -358,6 +376,18 @@ export default function LeadsPage() {
                 style={{ height: '28px', width: '140px', fontSize: '12px' }}
               />
 
+              
+              <button
+                className="fluent-btn fluent-btn-secondary"
+                style={{ height: '28px', fontSize: '11px', padding: '0 8px', marginLeft: '8px' }}
+                onClick={() => setIsFilterPanelOpen(true)}
+              >
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" style={{ marginRight: '4px' }}>
+                  <path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.128.334L10 8.692V13.5a.5.5 0 0 1-.342.474l-3 1A.5.5 0 0 1 6 14.5V8.692L1.628 3.834A.5.5 0 0 1 1.5 3.5v-2zm1 .5v1.308l4.372 4.858A.5.5 0 0 1 7 8.5v5.306l2-.666V8.5a.5.5 0 0 1 .128-.334L13.5 3.308V2h-11z"/>
+                </svg>
+                Advanced Filter
+              </button>
+              
               {(bdmFilter || statusFilter || searchQuery) && (
                 <button
                   className="fluent-btn fluent-btn-secondary"
@@ -414,9 +444,8 @@ export default function LeadsPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredLeads.map((l) => {
+                  paginatedLeads.map((l) => {
                     const isChecked = selectedIds.has(l.id);
-                    const tag = tags.find((t) => t.id === l.tag_id);
                     const bdm = bdms.find((u) => u.id === l.assigned_to);
 
                     return (
@@ -446,9 +475,17 @@ export default function LeadsPage() {
                         <td>{l.company_name || '—'}</td>
                         <td>{l.city ? `${l.city}, ${l.state || ''}` : l.state || '—'}</td>
                         <td>
-                          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                            {tag ? tag.name : '—'}
-                          </span>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {l.tags && l.tags.length > 0 ? (
+                              l.tags.map(t => (
+                                <span key={t.id} style={{ fontSize: '11px', background: t.color_hex ? `${t.color_hex}22` : '#eee', color: t.color_hex || '#333', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                                  {t.name}
+                                </span>
+                              ))
+                            ) : (
+                              <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>—</span>
+                            )}
+                          </div>
                         </td>
                         <td>
                           <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 600 }}>
@@ -501,6 +538,47 @@ export default function LeadsPage() {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination Controls */}
+          {filteredLeads.length > 0 && (
+            <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-border)' }}>
+              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredLeads.length)} of {filteredLeads.length} leads
+              </div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <select 
+                  className="form-field-select" 
+                  style={{ height: '28px', fontSize: '12px', padding: '0 8px', minWidth: '70px' }}
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option value={25}>25 / page</option>
+                  <option value={50}>50 / page</option>
+                  <option value={100}>100 / page</option>
+                </select>
+                <button 
+                  className="fluent-btn-icon" 
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  style={{ padding: '4px 8px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '4px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+                >
+                  Prev
+                </button>
+                <span style={{ fontSize: '12px' }}>Page {currentPage} of {Math.ceil(filteredLeads.length / pageSize)}</span>
+                <button 
+                  className="fluent-btn-icon" 
+                  disabled={currentPage === Math.ceil(filteredLeads.length / pageSize)}
+                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredLeads.length / pageSize), p + 1))}
+                  style={{ padding: '4px 8px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '4px', cursor: currentPage === Math.ceil(filteredLeads.length / pageSize) ? 'not-allowed' : 'pointer' }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -523,6 +601,19 @@ export default function LeadsPage() {
           isOpen={isBulkAssignOpen}
           selectedLeadIds={Array.from(selectedIds)}
           onClose={() => setIsBulkAssignOpen(false)}
+          onSuccess={() => {
+            setSelectedIds(new Set());
+            refetch();
+          }}
+        />
+      )}
+
+      {/* Bulk Tag Modal */}
+      {isBulkTagOpen && (
+        <BulkTagModal
+          isOpen={isBulkTagOpen}
+          selectedLeadIds={Array.from(selectedIds)}
+          onClose={() => setIsBulkTagOpen(false)}
           onSuccess={() => {
             setSelectedIds(new Set());
             refetch();
@@ -558,6 +649,25 @@ export default function LeadsPage() {
           }}
         />
       )}
+    
+      {/* Advanced Filter Panel */}
+      <LeadFilterPanel
+        isOpen={isFilterPanelOpen}
+        onClose={() => setIsFilterPanelOpen(false)}
+        filters={advancedFilters}
+        setFilters={setAdvancedFilters}
+        onApply={(f) => {
+          setBdmFilter(f.assigned_to);
+          setStatusFilter(f.status);
+          setSearchQuery(f.search);
+          const params = new URLSearchParams();
+          if (f.assigned_to) params.set('bdm', f.assigned_to);
+          if (f.status) params.set('status', f.status);
+          if (f.search) params.set('q', f.search);
+          if (f.tag_ids?.length) params.set('tags', f.tag_ids.join(','));
+          setSearchParams(params, { replace: true });
+        }}
+      />
     </>
   );
 }
