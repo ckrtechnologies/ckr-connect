@@ -90,5 +90,17 @@ export const adminStaffService = {
     }
 
     return await adminStaffRepository.toggleActive(id, isActive);
+  },
+
+  async deleteStaff(id) {
+    const existing = await adminStaffRepository.findById(id);
+    if (!existing) {
+      const err = new Error('Staff member not found');
+      err.statusCode = 404;
+      err.code = 'STAFF_NOT_FOUND';
+      throw err;
+    }
+
+    return await adminStaffRepository.delete(id);
   }
 };

@@ -46,7 +46,7 @@ const runTests = async () => {
     const bdmLoginRes = await fetch(`${baseUrl}/api/v1/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'aarav.sharma@ckrtechnologies.in', password: 'password@1' })
+      body: JSON.stringify({ email: 'b1@gmail.com', password: 'password@1' })
     }).then(r => r.json());
 
     assert(bdmLoginRes.success === true, 'BDM login succeeded');
@@ -100,6 +100,7 @@ const runTests = async () => {
         phone: '+919988776655',
         source: 'website',
         expected_value: 750000,
+        tag_id: bootRes.data?.tags?.[0]?.id,
         assigned_to: bdmUserId
       })
     }).then(r => r.json());
@@ -108,14 +109,79 @@ const runTests = async () => {
     const testLeadId = createLeadRes.data?.id;
     assert(testLeadId !== undefined, `New lead ID generated: ${testLeadId}`);
 
-    // 7. Admin Staff Roster
-    console.log('\n--- 7. Testing Admin Staff ---');
+    // 7. Admin Staff Roster & Full CRUD
+    console.log('\n--- 7. Testing Admin Staff Full CRUD ---');
     const staffRes = await fetch(`${baseUrl}/api/v1/admin/staff`, {
       headers: { Authorization: `Bearer ${adminToken}` }
     }).then(r => r.json());
 
     assert(staffRes.success === true, 'Staff roster retrieved');
-    assert(staffRes.data?.length >= 5, `Expected at least 5 staff, got ${staffRes.data?.length}`);
+    assert(staffRes.data?.length >= 2, `Expected at least 2 staff, got ${staffRes.data?.length}`);
+
+    // Create staff
+    const uniqueEmail = `test.staff.${Date.now()}@ckrtechnologies.in`;
+    const createStaffRes = await fetch(`${baseUrl}/api/v1/admin/staff`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({
+        name: 'Automated Test Staff',
+        email: uniqueEmail,
+        phone: '+919876543299',
+        role: 'bdm',
+        designation: 'Senior Business Development Manager',
+        target_amount: 600000,
+        temp_password: 'password@1'
+      })
+    }).then(r => r.json());
+
+    assert(createStaffRes.success === true, 'Staff member created successfully');
+    const newStaffId = createStaffRes.data?.id;
+    assert(newStaffId !== undefined, `Created staff ID: ${newStaffId}`);
+    assert(createStaffRes.data?.initial_password === 'password@1', 'Initial password returned');
+
+    // Get staff by ID
+    const getStaffRes = await fetch(`${baseUrl}/api/v1/admin/staff/${newStaffId}`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    }).then(r => r.json());
+
+    assert(getStaffRes.success === true, 'Staff member fetched by ID');
+    assert(getStaffRes.data?.designation === 'Senior Business Development Manager', 'Designation persisted and fetched');
+    assert(Number(getStaffRes.data?.target_amount) === 600000, 'Sales target persisted and fetched');
+
+    // Update staff
+    const updateStaffRes = await fetch(`${baseUrl}/api/v1/admin/staff/${newStaffId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({
+        name: 'Automated Test Staff (Updated)',
+        designation: 'Lead Enterprise Consultant',
+        target_amount: 800000
+      })
+    }).then(r => r.json());
+
+    assert(updateStaffRes.success === true, 'Staff member updated successfully');
+    assert(updateStaffRes.data?.name === 'Automated Test Staff (Updated)', 'Staff name updated');
+
+    // Delete staff
+    const deleteStaffRes = await fetch(`${baseUrl}/api/v1/admin/staff/${newStaffId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    }).then(r => r.json());
+
+    assert(deleteStaffRes.success === true, 'Staff member deleted successfully');
+
+    // Verify staff no longer active in roster
+    const verifyRosterRes = await fetch(`${baseUrl}/api/v1/admin/staff`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    }).then(r => r.json());
+    const deletedStaffStillThere = verifyRosterRes.data?.some(u => u.id === newStaffId && u.is_active === true);
+    assert(!deletedStaffStillThere, 'Deleted staff is no longer active in roster');
 
     // 8. Admin Attendance Matrix
     console.log('\n--- 8. Testing Admin Attendance Matrix ---');

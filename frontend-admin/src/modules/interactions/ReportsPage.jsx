@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import interactionsApi from './api.js';
+import React, { useState } from 'react';
+import { useGetInteractionsQuery, useGetDailySummaryQuery } from '../../core/api/apiSlice.js';
 import CommandBar from '../../core/layout/CommandBar.jsx';
 import DataGrid from '../../core/components/DataGrid.jsx';
 import { useBootstrap } from '../../core/context/BootstrapContext.jsx';
-import { toast } from '../../core/components/Toast.jsx';
-import { RefreshCw, Phone, Calendar, Clock, User } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 export default function ReportsPage() {
   const { bdms } = useBootstrap();
@@ -12,37 +11,24 @@ export default function ReportsPage() {
   const [selectedBdm, setSelectedBdm] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
 
-  const [interactions, setInteractions] = useState([]);
-  const [summary, setSummary] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const ledgerParams = {};
+  if (selectedBdm) ledgerParams.bdm_id = selectedBdm;
+  if (selectedDate) {
+    ledgerParams.start_date = selectedDate;
+    ledgerParams.end_date = selectedDate;
+  }
 
-  const fetchData = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      if (activeTab === 'LEDGER') {
-        const params = {};
-        if (selectedBdm) params.user_id = selectedBdm;
-        if (selectedDate) params.date = selectedDate;
-        const res = await interactionsApi.listInteractions(params);
-        if (res?.data) {
-          setInteractions(res.data.interactions || res.data || []);
-        }
-      } else {
-        const res = await interactionsApi.getDailySummary({ date: selectedDate });
-        if (res?.data) {
-          setSummary(res.data.summary || res.data || []);
-        }
-      }
-    } catch (err) {
-      toast.error('Failed to load activity reports');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [activeTab, selectedBdm, selectedDate]);
+  const { data: ledgerRes, isLoading: ledgerLoading, refetch: refetchLedger } = useGetInteractionsQuery(ledgerParams);
+  const { data: summaryRes, isLoading: summaryLoading, refetch: refetchSummary } = useGetDailySummaryQuery({ date: selectedDate });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const interactions = Array.isArray(ledgerRes?.data?.items)
+    ? ledgerRes.data.items
+    : (Array.isArray(ledgerRes?.data) ? ledgerRes.data : []);
+  const summary = Array.isArray(summaryRes?.data)
+    ? summaryRes.data
+    : (Array.isArray(summaryRes?.data?.summary) ? summaryRes.data.summary : []);
+  const isLoading = activeTab === 'LEDGER' ? ledgerLoading : summaryLoading;
+  const refetch = activeTab === 'LEDGER' ? refetchLedger : refetchSummary;
 
   const ledgerColumns = [
     {
@@ -111,22 +97,49 @@ export default function ReportsPage() {
     {
       field: 'bdm_name',
       header: 'Sales Representative',
-      render: (val) => <span style={{ fontWeight: 600 }}>{val}</span>,
+      render: (val, row) => (
+        <div>
+          <span style={{ fontWeight: 600 }}>{val}</span>
+          {row.employee_id && (
+            <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginLeft: '6px' }}>
+              ({row.employee_id})
+            </span>
+          )}
+        </div>
+      ),
     },
     {
-      field: 'call_count',
-      header: 'Phone Calls',
-      render: (val) => <span style={{ fontWeight: 600 }}>{val || 0}</span>,
+      field: 'total_calls',
+      header: 'Total Calls',
+      render: (val, row) => <span style={{ fontWeight: 600 }}>{val ?? row.call_count ?? 0}</span>,
     },
     {
-      field: 'meeting_count',
+      field: 'connected_calls',
+      header: 'Connected Calls',
+      render: (val) => <span style={{ fontWeight: 600, color: 'var(--color-success)' }}>{val ?? 0}</span>,
+    },
+    {
+      field: 'meetings',
       header: 'Client Meetings',
-      render: (val) => <span style={{ fontWeight: 600 }}>{val || 0}</span>,
+      render: (val, row) => <span style={{ fontWeight: 600 }}>{val ?? row.meeting_count ?? 0}</span>,
     },
     {
-      field: 'total_minutes',
-      header: 'Total Talk Time',
-      render: (val) => <span>{val || 0} mins</span>,
+      field: 'total_interactions',
+      header: 'Total Interactions',
+      render: (val) => (
+        <span
+          style={{
+            padding: '2px 8px',
+            borderRadius: 'var(--radius-pill)',
+            backgroundColor: 'var(--color-primary-light)',
+            color: 'var(--color-primary)',
+            fontWeight: 700,
+            fontSize: '11px',
+          }}
+        >
+          {val ?? 0}
+        </span>
+      ),
     },
   ];
 
@@ -139,7 +152,7 @@ export default function ReportsPage() {
           {
             label: 'Refresh',
             icon: <RefreshCw size={14} className={isLoading ? 'spin' : ''} />,
-            onClick: fetchData,
+            onClick: refetch,
           },
         ]}
       >
@@ -180,7 +193,7 @@ export default function ReportsPage() {
         <DataGrid
           columns={activeTab === 'LEDGER' ? ledgerColumns : summaryColumns}
           data={activeTab === 'LEDGER' ? interactions : summary}
-          keyField="id"
+          keyField={activeTab === 'LEDGER' ? 'id' : 'bdm_id'}
           isLoading={isLoading}
           filterTabs={[
             { id: 'LEDGER', label: 'Detailed Call Ledger' },

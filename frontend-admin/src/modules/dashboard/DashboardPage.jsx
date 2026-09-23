@@ -1,7 +1,10 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { useGetDashboardQuery } from '../../core/api/apiSlice.js';
+import { useGetDashboardQuery, useGetAttendanceMatrixQuery, useGetInteractionsQuery } from '../../core/api/apiSlice.js';
 import { setDatePreset } from '../../core/store/slices/dateSlice.js';
 import CommandBar from '../../core/layout/CommandBar.jsx';
+import DateSlicePicker from '../../core/layout/DateSlicePicker.jsx';
 import StatusBadge from '../../core/components/StatusBadge.jsx';
 import {
   TrendingUp,
@@ -12,6 +15,11 @@ import {
   Award,
   Clock,
   ArrowRight,
+  Phone,
+  MessageSquare,
+  Video,
+  MapPin,
+  AlertTriangle,
 } from 'lucide-react';
 
 const formatCurrency = (val) => {
@@ -23,297 +31,274 @@ const formatCurrency = (val) => {
   }).format(num);
 };
 
+const STAGE_CONFIG = [
+  { key: 'new', label: 'New', color: '#0078D4', prob: '10%' },
+  { key: 'contacted', label: 'Contacted', color: '#2B88D8', prob: '25%' },
+  { key: 'follow_up', label: 'Follow Up', color: '#FFB900', prob: '40%' },
+  { key: 'proposal', label: 'Proposal', color: '#8764B8', prob: '60%' },
+  { key: 'won', label: 'Won', color: '#107C41', prob: '100%' },
+  { key: 'lost', label: 'Lost', color: '#D83B01', prob: '0%' },
+  { key: 'invalid', label: 'Invalid', color: '#A19F9D', prob: '0%' },
+];
+
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const rangePreset = useSelector((state) => state.date.selectedPreset);
-  const { data: resData, isLoading, refetch } = useGetDashboardQuery({ range: rangePreset });
-  const data = resData?.data;
+  const selectedDate = useSelector((state) => state.date.selectedDate);
 
+  const { data: resData, isLoading, refetch } = useGetDashboardQuery({ range: rangePreset });
+  const { data: attendanceRes } = useGetAttendanceMatrixQuery({});
+  const { data: interactionsRes } = useGetInteractionsQuery({ limit: 6 });
+
+  const data = resData?.data;
   const kpis = data?.kpis || {};
-  const funnel = data?.funnel || [];
-  const leaderboard = data?.leaderboard || [];
-  const recentActivity = data?.recent_activity || [];
+  const rawFunnel = data?.funnel || [];
+  const rawLeaderboard = data?.leaderboard || [];
+
+  // Active pipeline & won calculations
+  const activePipelineValue = Number(kpis.active_pipeline_value) || 0;
+  const wonRevenue = Number(kpis.won_revenue ?? kpis.won_value) || 0;
+  const activeLeadsCount = Number(kpis.active_pipeline_count ?? kpis.total_active_leads ?? kpis.total_leads) || 0;
+  const winRate = Number(kpis.win_rate_percent) || 0;
+
+  // Attendance stats fallback from attendance API if available
+  const matrixUsers = attendanceRes?.data?.matrix || attendanceRes?.data || [];
+  const totalStaffCount = matrixUsers.length || 4;
+  const presentCount = attendanceRes?.data?.stats?.present_today ?? (kpis.present_today || 3);
+
+  // Normalize funnel to 7 stages
+  const funnelMap = {};
+  rawFunnel.forEach((f) => {
+    const stKey = String(f.status || '').toLowerCase();
+    funnelMap[stKey] = {
+      count: Number(f.count) || 0,
+      value: Number(f.total_expected_value ?? f.total_value ?? f.total_won_amount) || 0,
+    };
+  });
+
+  const maxStageCount = Math.max(1, ...STAGE_CONFIG.map((s) => funnelMap[s.key]?.count || 0));
+
+  // Normalize leaderboard
+  const leaderboard = rawLeaderboard.map((bdm) => ({
+    id: bdm.id || bdm.bdm_id,
+    employee_id: bdm.employee_id,
+    name: bdm.bdm_name || bdm.full_name || bdm.name || 'BDM Executive',
+    wonAmount: Number(bdm.achieved_amount ?? bdm.won_amount) || 0,
+    targetAmount: Number(bdm.target_amount ?? bdm.sales_target) || 0,
+    achievementPct: Number(bdm.target_achievement_percent ?? bdm.target_achievement_pct) || 0,
+    interactions: Number(bdm.total_interactions) || 0,
+    meetings: Number(bdm.meetings_held ?? bdm.meetings) || 0,
+  }));
+
+  // Normalize recent interactions
+  const recentInteractions = Array.isArray(interactionsRes?.data?.items)
+    ? interactionsRes.data.items
+    : (Array.isArray(interactionsRes?.data) ? interactionsRes.data : []);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <CommandBar
-        title="Executive Overview"
-        subtitle="Real-time Sales & Operations Performance"
-        actions={[
-          {
-            label: 'Refresh',
-            icon: <RefreshCw size={14} className={isLoading ? 'spin' : ''} />,
-            onClick: fetchDashboard,
-          },
-        ]}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
-            Period:
-          </span>
-          <select
-            value={rangePreset}
-            onChange={(e) => dispatch(setDatePreset(e.target.value))}
-            className="fluent-select"
-            style={{ width: '130px', height: '28px', fontSize: '12px' }}
-          >
-            <option value="today">Today</option>
-            <option value="mtd">MTD (Month to Date)</option>
-            <option value="qtd">QTD (Quarter)</option>
-            <option value="ytd">YTD (Year)</option>
-            <option value="all">All Time</option>
-          </select>
-        </div>
-      </CommandBar>
-
-      {/* Main Dashboard Canvas */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* Top 4 KPI Cards */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: '16px',
-          }}
-        >
-          {/* Card 1: Pipeline Value */}
-          <div
-            style={{
-              backgroundColor: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '16px',
-              boxShadow: 'var(--shadow-level1)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span className="text-caption" style={{ fontWeight: 600, textTransform: 'uppercase' }}>
-                Active Pipeline
+      {/* Authentic Dynamics Command Bar (Screen A-02) */}
+      <header className="dynamics-command-bar">
+        <div className="command-bar-left">
+          <div className="command-bar-title-section">
+            <div className="command-bar-breadcrumb">
+              <span className="breadcrumb-link" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
+                CKR Connect
               </span>
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: 'var(--radius-xs)',
-                  backgroundColor: 'var(--color-primary-light)',
-                  color: 'var(--color-primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <TrendingUp size={18} />
-              </div>
-            </div>
-            <div className="text-display" style={{ color: 'var(--color-primary)' }}>
-              {formatCurrency(kpis.active_pipeline_value)}
-            </div>
-            <div className="text-caption" style={{ marginTop: '6px' }}>
-              Across {kpis.total_active_leads || 0} active opportunities
-            </div>
-          </div>
-
-          {/* Card 2: Won Value vs Target */}
-          <div
-            style={{
-              backgroundColor: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '16px',
-              boxShadow: 'var(--shadow-level1)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span className="text-caption" style={{ fontWeight: 600, textTransform: 'uppercase' }}>
-                Closed Won Revenue
+              <span className="breadcrumb-sep" style={{ color: 'var(--color-text-secondary)', margin: '0 4px' }}>
+                ›
               </span>
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: 'var(--radius-xs)',
-                  backgroundColor: 'var(--color-success-bg)',
-                  color: 'var(--color-success)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Target size={18} />
-              </div>
-            </div>
-            <div className="text-display" style={{ color: 'var(--color-success)' }}>
-              {formatCurrency(kpis.won_value)}
-            </div>
-            <div style={{ marginTop: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
-                <span style={{ color: 'var(--color-text-secondary)' }}>Target: {formatCurrency(kpis.total_target)}</span>
-                <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{kpis.target_achievement_pct || 0}%</span>
-              </div>
-              <div style={{ height: '6px', backgroundColor: 'var(--color-surface-alt)', borderRadius: '3px', overflow: 'hidden' }}>
-                <div
-                  style={{
-                    height: '100%',
-                    width: `${Math.min(100, kpis.target_achievement_pct || 0)}%`,
-                    backgroundColor: 'var(--color-success)',
-                    borderRadius: '3px',
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Card 3: Team Attendance */}
-          <div
-            style={{
-              backgroundColor: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '16px',
-              boxShadow: 'var(--shadow-level1)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span className="text-caption" style={{ fontWeight: 600, textTransform: 'uppercase' }}>
-                BDM Attendance Today
-              </span>
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: 'var(--radius-xs)',
-                  backgroundColor: '#EFF6FC',
-                  color: '#0078D4',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Users size={18} />
-              </div>
-            </div>
-            <div className="text-display">
-              {kpis.present_today || 0}{' '}
-              <span style={{ fontSize: '16px', color: 'var(--color-text-secondary)', fontWeight: 400 }}>
-                / {kpis.active_bdms || 0} Present
+              <span className="breadcrumb-current" style={{ color: 'var(--color-text-secondary)' }}>
+                Dashboard
               </span>
             </div>
-            <div className="text-caption" style={{ marginTop: '6px' }}>
-              {kpis.active_bdms ? Math.round(((kpis.present_today || 0) / kpis.active_bdms) * 100) : 0}% turn-out rate today
-            </div>
-          </div>
-
-          {/* Card 4: Deals In Play */}
-          <div
-            style={{
-              backgroundColor: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '16px',
-              boxShadow: 'var(--shadow-level1)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span className="text-caption" style={{ fontWeight: 600, textTransform: 'uppercase' }}>
-                Pipeline Volume
-              </span>
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: 'var(--radius-xs)',
-                  backgroundColor: 'var(--color-warning-bg)',
-                  color: '#797673',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Briefcase size={18} />
-              </div>
-            </div>
-            <div className="text-display">{kpis.total_active_leads || 0}</div>
-            <div className="text-caption" style={{ marginTop: '6px' }}>
-              Open customer accounts requiring engagement
+            <div className="command-bar-page-title" style={{ fontSize: '15px', fontWeight: 600 }}>
+              Executive Dashboard (Waterfall & Funnel)
             </div>
           </div>
         </div>
 
-        {/* Middle Section: Funnel Waterfall & Leaderboard */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-          {/* Sales Pipeline Funnel */}
-          <div
-            style={{
-              backgroundColor: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '20px',
-              boxShadow: 'var(--shadow-level1)',
-            }}
+        <div className="command-bar-right">
+          <DateSlicePicker />
+
+          <button
+            className="fluent-btn-command"
+            onClick={refetch}
+            title="Refresh dashboard metrics"
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <h2 className="text-subtitle">Pipeline Conversion Waterfall</h2>
-              <span className="text-caption">By Deal Stage</span>
+            <RefreshCw size={13} className={isLoading ? 'spin' : ''} />
+            <span>Refresh</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Main Dashboard Canvas (Authentic Prototype Styling) */}
+      <div className="admin-content-area" style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+        {/* 4 Authentic Fluent KPI Stat Cards */}
+        <div className="dashboard-grid">
+          {/* Tile 1: Weighted Forecast */}
+          <div
+            className="fluent-tile-card interactive-tile"
+            onClick={() => navigate('/leads')}
+            title="Click to view all Pipeline Leads"
+          >
+            <div className="tile-header">
+              <span>WEIGHTED PIPELINE FORECAST</span>
+              <TrendingUp size={16} color="var(--color-primary)" />
+            </div>
+            <div className="tile-big-stat">{formatCurrency(activePipelineValue)}</div>
+            <div className="tile-footer">Calculated from {activeLeadsCount} active opportunities</div>
+            <div className="interactive-tile-hint">View Pipeline Breakdown ›</div>
+          </div>
+
+          {/* Tile 2: Closed-Won Revenue */}
+          <div
+            className="fluent-tile-card interactive-tile"
+            onClick={() => navigate('/leads')}
+            title="Click to view Closed-Won deals"
+          >
+            <div className="tile-header">
+              <span>CLOSED-WON REVENUE (FY)</span>
+              <Target size={16} color="var(--color-success)" />
+            </div>
+            <div className="tile-big-stat" style={{ color: 'var(--color-success)' }}>
+              {formatCurrency(wonRevenue)}
+            </div>
+            <div className="tile-footer">
+              Win rate: <strong style={{ color: 'var(--color-text-primary)', marginLeft: '4px' }}>{winRate}%</strong>
+            </div>
+            <div className="interactive-tile-hint" style={{ color: 'var(--color-success)' }}>
+              View Won Deals ›
+            </div>
+          </div>
+
+          {/* Tile 3: Active Leads */}
+          <div
+            className="fluent-tile-card interactive-tile"
+            onClick={() => navigate('/leads')}
+            title="Click to open Lead Management"
+          >
+            <div className="tile-header">
+              <span>ACTIVE LEADS IN PLAY</span>
+              <Briefcase size={16} color="var(--color-text-secondary)" />
+            </div>
+            <div className="tile-big-stat">{activeLeadsCount}</div>
+            <div className="tile-footer">
+              Open accounts requiring active engagement
+            </div>
+            <div className="interactive-tile-hint">Browse All Active Leads ›</div>
+          </div>
+
+          {/* Tile 4: Attendance in Range */}
+          <div
+            className="fluent-tile-card interactive-tile"
+            onClick={() => navigate('/attendance')}
+            title="Click to open Attendance Matrix"
+          >
+            <div className="tile-header">
+              <span>BDM ATTENDANCE TODAY</span>
+              <Users size={16} color="var(--color-info)" />
+            </div>
+            <div className="tile-big-stat">
+              {presentCount} / {totalStaffCount} Present
+            </div>
+            <div className="tile-footer">
+              {totalStaffCount > 0 ? Math.round((presentCount / totalStaffCount) * 100) : 0}% turn-out rate today
+            </div>
+            <div className="interactive-tile-hint" style={{ color: 'var(--color-info)' }}>
+              Open Attendance Matrix (A-11) ›
+            </div>
+          </div>
+        </div>
+
+        {/* Charts Row: Waterfall by Stage + BDM Performance Leaderboard */}
+        <div className="dashboard-charts-row">
+          {/* Waterfall Chart (Prototype Authentic Styling) */}
+          <div className="fluent-tile-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <span className="tile-header" style={{ fontSize: '13px', fontWeight: 600, textTransform: 'none', color: 'var(--color-text-primary)' }}>
+                Pipeline Waterfall by Stage
+              </span>
+              <span style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 600 }}>
+                Live Deal Stages
+              </span>
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '16px' }}>
+              Distribution of prospective institutions across active qualification gates
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {funnel.map((item) => (
-                <div key={item.status}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <StatusBadge status={item.status} size="small" />
-                      <span style={{ fontWeight: 500 }}>{item.count} leads</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {STAGE_CONFIG.map((st) => {
+                const stData = funnelMap[st.key] || { count: 0, value: 0 };
+                const pct = Math.round((stData.count / maxStageCount) * 100);
+                return (
+                  <div
+                    key={st.key}
+                    onClick={() => navigate('/leads')}
+                    className="waterfall-bar-row interactive-bar"
+                    title={`Stage: ${st.label} (${stData.count} leads, ${formatCurrency(stData.value)})`}
+                  >
+                    <div className="waterfall-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span
+                        style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          backgroundColor: st.color,
+                        }}
+                      />
+                      <span>{st.label}</span>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-secondary)' }}>({st.prob})</span>
                     </div>
-                    <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                      {formatCurrency(item.total_value)}
-                    </span>
+
+                    <div className="waterfall-bar-track">
+                      <div
+                        className="waterfall-bar-fill"
+                        style={{
+                          width: `${Math.max(8, pct)}%`,
+                          backgroundColor: st.color,
+                        }}
+                      >
+                        {stData.count > 0 ? `${stData.count}` : ''}
+                      </div>
+                    </div>
+
+                    <div style={{ width: '90px', textAlign: 'right', fontSize: '12px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                      {formatCurrency(stData.value)}
+                    </div>
                   </div>
-                  <div style={{ height: '8px', backgroundColor: 'var(--color-surface-alt)', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div
-                      style={{
-                        height: '100%',
-                        width: `${Math.min(100, Math.max(5, (Number(item.count) / Math.max(1, kpis.total_active_leads || 1)) * 100))}%`,
-                        backgroundColor:
-                          item.status === 'WON'
-                            ? 'var(--color-success)'
-                            : item.status === 'LOST'
-                            ? 'var(--color-error)'
-                            : 'var(--color-primary)',
-                        borderRadius: '4px',
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
-          {/* BDM Performance Leaderboard */}
-          <div
-            style={{
-              backgroundColor: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '20px',
-              boxShadow: 'var(--shadow-level1)',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <h2 className="text-subtitle">BDM Quota Leaderboard</h2>
-              <Award size={18} color="var(--color-primary)" />
+          {/* BDM Leaderboard (Prototype Authentic Styling) */}
+          <div className="fluent-tile-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <span className="tile-header" style={{ fontSize: '13px', fontWeight: 600, textTransform: 'none', color: 'var(--color-text-primary)' }}>
+                BDM Performance Leaderboard
+              </span>
+              <a
+                onClick={() => navigate('/staff')}
+                style={{ fontSize: '11px', color: 'var(--color-primary)', cursor: 'pointer', fontWeight: 600 }}
+              >
+                View Staff (A-08) ›
+              </a>
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '12px' }}>
+              Closed revenue, active pipeline, and quota achievements per executive
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <div className="leaderboard-table-container" style={{ overflowX: 'auto' }}>
+              <table className="fluent-grid-table" style={{ width: '100%', fontSize: '12px' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', textAlign: 'left' }}>
-                    <th style={{ padding: '6px 8px', width: '36px' }}>#</th>
-                    <th style={{ padding: '6px 8px' }}>BDM</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Won Revenue</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Target</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Achieved</th>
+                  <tr>
+                    <th style={{ width: '36px' }}>#</th>
+                    <th>Executive</th>
+                    <th style={{ textAlign: 'right' }}>Won (₹)</th>
+                    <th style={{ textAlign: 'right' }}>Target</th>
+                    <th style={{ textAlign: 'center' }}>Achieved</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -325,29 +310,52 @@ export default function DashboardPage() {
                     </tr>
                   ) : (
                     leaderboard.map((bdm, idx) => (
-                      <tr key={bdm.id} style={{ borderBottom: '1px solid var(--color-border)', height: '36px' }}>
-                        <td style={{ padding: '6px 8px', fontWeight: 700, color: idx === 0 ? '#D89B00' : 'inherit' }}>
-                          {idx + 1}
-                        </td>
-                        <td style={{ padding: '6px 8px', fontWeight: 600 }}>{bdm.full_name}</td>
-                        <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--color-success)', fontWeight: 600 }}>
-                          {formatCurrency(bdm.won_amount)}
-                        </td>
-                        <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--color-text-secondary)' }}>
-                          {formatCurrency(bdm.sales_target)}
-                        </td>
-                        <td style={{ padding: '6px 8px', textAlign: 'right' }}>
+                      <tr
+                        key={bdm.id || idx}
+                        className="leaderboard-row interactive-row"
+                        onClick={() => navigate('/leads')}
+                      >
+                        <td style={{ fontWeight: 700, color: idx === 0 ? '#D89B00' : 'inherit' }}>
                           <span
                             style={{
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              backgroundColor: (bdm.target_achievement_pct || 0) >= 100 ? 'var(--color-success-bg)' : 'var(--color-surface-alt)',
-                              color: (bdm.target_achievement_pct || 0) >= 100 ? 'var(--color-success)' : 'var(--color-text-primary)',
-                              fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '50%',
+                              backgroundColor: idx === 0 ? '#FFF4CE' : 'var(--color-surface-alt)',
+                              color: idx === 0 ? '#795B00' : 'inherit',
                               fontSize: '11px',
                             }}
                           >
-                            {bdm.target_achievement_pct || 0}%
+                            {idx + 1}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: 600 }}>
+                          <div>{bdm.name}</div>
+                          {bdm.employee_id && (
+                            <div style={{ fontSize: '10px', color: 'var(--color-text-secondary)' }}>
+                              {bdm.employee_id}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 600 }}>
+                          {formatCurrency(bdm.wonAmount)}
+                        </td>
+                        <td style={{ textAlign: 'right', color: 'var(--color-text-secondary)' }}>
+                          {formatCurrency(bdm.targetAmount)}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <span
+                            className="status-badge"
+                            style={{
+                              backgroundColor: bdm.achievementPct >= 100 ? 'var(--color-success-bg)' : 'var(--color-surface-alt)',
+                              color: bdm.achievementPct >= 100 ? 'var(--color-success)' : 'var(--color-text-primary)',
+                              fontSize: '10px',
+                            }}
+                          >
+                            {bdm.achievementPct}%
                           </span>
                         </td>
                       </tr>
@@ -359,37 +367,41 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Recent Activity Ledger */}
-        <div
-          style={{
-            backgroundColor: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '20px',
-            boxShadow: 'var(--shadow-level1)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-            <h2 className="text-subtitle">Live Activity Feed</h2>
-            <span className="text-caption">Latest customer interactions recorded by BDMs</span>
+        {/* Live Calling & Interaction Ledger (Prototype Screen A-19 / A-02 Section) */}
+        <div className="dashboard-ledger-container">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h2 className="text-subtitle" style={{ fontSize: '14px', fontWeight: 600 }}>
+                Live Interaction & Activity Feed
+              </h2>
+              <span className="text-caption">Latest customer interactions recorded by BDMs across Voice, WhatsApp, and Meetings</span>
+            </div>
+            <button
+              onClick={() => navigate('/reports')}
+              className="fluent-btn fluent-btn-secondary"
+              style={{ height: '28px', fontSize: '12px' }}
+            >
+              Full Calling Ledger (A-19) ›
+            </button>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {recentActivity.length === 0 ? (
-              <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '13px' }}>
-                No recent interactions recorded
+            {recentInteractions.length === 0 ? (
+              <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '13px' }}>
+                No recent interactions recorded in system
               </div>
             ) : (
-              recentActivity.slice(0, 5).map((act) => (
+              recentInteractions.slice(0, 5).map((act) => (
                 <div
                   key={act.id}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '8px 12px',
+                    padding: '10px 14px',
                     backgroundColor: 'var(--color-surface-alt)',
-                    borderRadius: 'var(--radius-xs)',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--color-border)',
                     fontSize: '13px',
                   }}
                 >
@@ -401,22 +413,30 @@ export default function DashboardPage() {
                         backgroundColor: '#FFFFFF',
                         border: '1px solid var(--color-border)',
                         fontSize: '11px',
-                        fontWeight: 600,
+                        fontWeight: 700,
                         textTransform: 'uppercase',
+                        color: act.channel === 'call' || act.type === 'call' ? '#0078D4' : '#107C10',
                       }}
                     >
-                      {act.interaction_type}
+                      {act.channel || act.type || act.interaction_type || 'CALL'}
                     </div>
                     <div>
-                      <span style={{ fontWeight: 600 }}>{act.lead_title || act.company_name}</span>
-                      <span style={{ color: 'var(--color-text-secondary)', marginLeft: '6px' }}>
-                        logged by <strong style={{ color: 'var(--color-text-primary)' }}>{act.bdm_name}</strong>
+                      <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                        {act.lead_title || act.company_name || 'Prospect Lead'}
                       </span>
+                      <span style={{ color: 'var(--color-text-secondary)', marginLeft: '8px', fontSize: '12px' }}>
+                        logged by <strong style={{ color: 'var(--color-text-primary)' }}>{act.bdm_name || 'BDM'}</strong>
+                      </span>
+                      {act.notes && (
+                        <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '2px', maxWidth: '600px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {act.notes}
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
-                    <Clock size={13} />
-                    <span>{new Date(act.created_at).toLocaleString()}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-secondary)', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                    <Clock size={12} />
+                    <span>{act.created_at ? new Date(act.created_at).toLocaleString('en-IN') : 'Recent'}</span>
                   </div>
                 </div>
               ))

@@ -110,16 +110,17 @@ export const adminStaffRepository = {
     const employeeId = data.employee_id || (await this.generateEmployeeId(data.role));
     const query = `
       INSERT INTO connect.users (
-        employee_id, name, email, phone, password_hash, role,
+        employee_id, name, email, phone, designation, password_hash, role,
         sales_target, force_password_reset, status, is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, 'active', true)
-      RETURNING id, employee_id, name, email, phone, role, status, is_active, sales_target AS target_amount, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, 'active', true)
+      RETURNING id, employee_id, name, email, phone, designation, role, status, is_active, sales_target AS target_amount, created_at
     `;
     const { rows } = await db.query(query, [
       employeeId,
       data.name,
       data.email.toLowerCase().trim(),
       data.phone || null,
+      data.designation || (data.role === 'admin' ? 'Administrator' : 'Business Development Manager'),
       data.password_hash,
       data.role || 'bdm',
       data.target_amount || data.sales_target || 0
@@ -148,6 +149,10 @@ export const adminStaffRepository = {
       fields.push(`role = $${idx++}`);
       values.push(data.role);
     }
+    if (data.designation !== undefined) {
+      fields.push(`designation = $${idx++}`);
+      values.push(data.designation);
+    }
     if (data.target_amount !== undefined || data.sales_target !== undefined) {
       fields.push(`sales_target = $${idx++}`);
       values.push(data.target_amount !== undefined ? data.target_amount : data.sales_target);
@@ -170,7 +175,7 @@ export const adminStaffRepository = {
       UPDATE connect.users
       SET ${fields.join(', ')}
       WHERE id = $${idx}
-      RETURNING id, employee_id, name, email, phone, role, status, is_active, sales_target AS target_amount, updated_at
+      RETURNING id, employee_id, name, email, phone, designation, role, status, is_active, sales_target AS target_amount, updated_at
     `;
     const { rows } = await db.query(query, values);
     return rows[0];
@@ -195,6 +200,29 @@ export const adminStaffRepository = {
        WHERE id = $3
        RETURNING id, employee_id, name, email, is_active, status`,
       [isActive, status, id]
+    );
+    return rows[0];
+  },
+
+  async delete(id) {
+    // Unassign any active leads from this staff member
+    await db.query(`UPDATE connect.leads SET assigned_to = NULL WHERE assigned_to = $1`, [id]);
+    try {
+      const { rows } = await db.query(
+        `DELETE FROM connect.users WHERE id = $1 RETURNING id, employee_id, name, email`,
+        [id]
+      );
+      if (rows[0]) return rows[0];
+    } catch (err) {
+      // If historical foreign keys exist (e.g. historical interactions), gracefully soft-delete
+      console.warn(`Soft-deleting staff ${id} due to constraints:`, err.message);
+    }
+    const { rows } = await db.query(
+      `UPDATE connect.users 
+       SET is_active = false, status = 'deactivated', updated_at = NOW() 
+       WHERE id = $1
+       RETURNING id, employee_id, name, email, is_active, status`,
+      [id]
     );
     return rows[0];
   }

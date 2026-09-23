@@ -11,5 +11,6 @@ router.get('/:id', adminStaffController.getStaffById);
 router.put('/:id', validate(updateStaffSchema), adminStaffController.updateStaff);
 router.post('/:id/reset-password', validate(resetPasswordSchema), adminStaffController.resetPassword);
 router.patch('/:id/toggle-active', adminStaffController.toggleActive);
+router.delete('/:id', adminStaffController.deleteStaff);
 
 export default router;

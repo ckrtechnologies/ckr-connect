@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import leadsApi from './api.js';
+import { useGetLeadDetailQuery } from '../../core/api/apiSlice.js';
 import CommandBar from '../../core/layout/CommandBar.jsx';
 import ProcessFlowBar from '../../core/components/ProcessFlowBar.jsx';
 import StatusBadge from '../../core/components/StatusBadge.jsx';
 import LeadStatusModal from './components/LeadStatusModal.jsx';
 import AddInteractionModal from './components/AddInteractionModal.jsx';
-import { toast } from '../../core/components/Toast.jsx';
 import {
   ArrowLeft,
   Phone,
@@ -35,35 +34,19 @@ export default function LeadDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [lead, setLead] = useState(null);
-  const [history, setHistory] = useState([]);
-  const [interactions, setInteractions] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: resData, isLoading, refetch } = useGetLeadDetailQuery(id);
+  const lead = resData?.data?.lead || resData?.data;
+  const history = Array.isArray(resData?.data?.history)
+    ? resData.data.history
+    : (Array.isArray(lead?.history) ? lead.history : []);
+  const interactions = Array.isArray(resData?.data?.interactions)
+    ? resData.data.interactions
+    : (Array.isArray(lead?.interactions) ? lead.interactions : []);
 
   // Modals
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [targetStatus, setTargetStatus] = useState(null);
   const [isInteractionModalOpen, setIsInteractionModalOpen] = useState(false);
-
-  const fetchLeadDetails = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const res = await leadsApi.getLead(id);
-      if (res?.data) {
-        setLead(res.data.lead || res.data);
-        setHistory(res.data.history || []);
-        setInteractions(res.data.interactions || []);
-      }
-    } catch (err) {
-      toast.error('Failed to load lead details');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => {
-    fetchLeadDetails();
-  }, [fetchLeadDetails]);
 
   const handleStageClick = (stageId) => {
     setTargetStatus(stageId);
@@ -121,7 +104,7 @@ export default function LeadDetailPage() {
           {
             label: 'Refresh',
             icon: <RefreshCw size={14} className={isLoading ? 'spin' : ''} />,
-            onClick: fetchLeadDetails,
+            onClick: refetch,
           },
         ]}
       />
@@ -444,7 +427,7 @@ export default function LeadDetailPage() {
         onClose={() => setIsStatusModalOpen(false)}
         lead={lead}
         targetStatus={targetStatus}
-        onSuccess={fetchLeadDetails}
+        onSuccess={refetch}
       />
 
       {/* Add Interaction Modal */}
@@ -452,7 +435,7 @@ export default function LeadDetailPage() {
         isOpen={isInteractionModalOpen}
         onClose={() => setIsInteractionModalOpen(false)}
         lead={lead}
-        onSuccess={fetchLeadDetails}
+        onSuccess={refetch}
       />
     </div>
   );

@@ -28,13 +28,18 @@ export default function AttendanceCorrectionModal({
 
     try {
       setIsSubmitting(true);
+      const normalizedStatus = String(status).toLowerCase();
       await attendanceApi.correctAttendance({
-        user_id: cellData.bdmId,
+        bdm_id: cellData.bdmId,
         date: cellData.date,
-        status,
-        reason: reason.trim(),
-        check_in_time: status === 'PRESENT' || status === 'HALF_DAY' ? `${cellData.date}T${checkInTime}:00` : null,
-        check_out_time: status === 'PRESENT' ? `${cellData.date}T${checkOutTime}:00` : null,
+        status: normalizedStatus === 'half day' ? 'half_day' : (normalizedStatus === 'leave' ? 'on_leave' : normalizedStatus),
+        correction_reason: reason.trim(),
+        punch_in: normalizedStatus === 'present' || normalizedStatus === 'half_day'
+          ? new Date(`${cellData.date}T${checkInTime || '09:30'}:00`).toISOString()
+          : null,
+        punch_out: normalizedStatus === 'present'
+          ? new Date(`${cellData.date}T${checkOutTime || '18:30'}:00`).toISOString()
+          : null,
       });
 
       toast.success('Attendance audit override saved');

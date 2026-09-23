@@ -137,6 +137,7 @@ CREATE TABLE IF NOT EXISTS connect.tags (
     id UUID PRIMARY KEY DEFAULT extensions.gen_random_uuid(),
     name TEXT NOT NULL UNIQUE,
     type connect.tag_type NOT NULL,
+    color_hex TEXT,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -174,8 +175,8 @@ CREATE TABLE IF NOT EXISTS connect.leads (
     expected_value NUMERIC(14, 2),
     probability_override INTEGER CHECK (probability_override IS NULL OR (probability_override >= 0 AND probability_override <= 100)),
     won_amount NUMERIC(14, 2),
-    next_followup_date DATE,
-    last_followup_date DATE,
+    next_followup_date TIMESTAMPTZ,
+    last_followup_date TIMESTAMPTZ,
     followup_count INTEGER NOT NULL DEFAULT 0,
     brd_url TEXT,
     lost_reason TEXT,

@@ -29,14 +29,16 @@ export default function AccountDetailModal({ isOpen, onClose, accountId }) {
     }
   }, [accountId, isOpen]);
 
-  const account = data?.account;
-  const leads = data?.leads || [];
+  const account = data?.account || data;
+  const leads = Array.isArray(data?.leads)
+    ? data.leads
+    : (Array.isArray(account?.leads) ? account.leads : []);
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={account?.company_name || 'Corporate Account'}
+      title={account?.name || account?.company_name || 'Corporate Account'}
       subtitle="Parent company profile and linked deals"
       maxWidth={640}
       footer={
@@ -61,7 +63,9 @@ export default function AccountDetailModal({ isOpen, onClose, accountId }) {
               }}
             >
               <div className="fluent-label">Total Deals Closed</div>
-              <div style={{ fontSize: '18px', fontWeight: 700 }}>{leads.length}</div>
+              <div style={{ fontSize: '18px', fontWeight: 700 }}>
+                {account?.won_deals_count ?? leads.filter((l) => String(l.status).toLowerCase() === 'won').length}
+              </div>
             </div>
             <div
               style={{
@@ -72,7 +76,7 @@ export default function AccountDetailModal({ isOpen, onClose, accountId }) {
             >
               <div className="fluent-label">Lifetime Won Revenue</div>
               <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-success)' }}>
-                {formatCurrency(account?.total_won_value)}
+                {formatCurrency(account?.lifetime_revenue ?? account?.total_won_value)}
               </div>
             </div>
           </div>
@@ -107,12 +111,14 @@ export default function AccountDetailModal({ isOpen, onClose, accountId }) {
                   ) : (
                     leads.map((l) => (
                       <tr key={l.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                        <td style={{ padding: '6px 10px', fontWeight: 600 }}>{l.title}</td>
+                        <td style={{ padding: '6px 10px', fontWeight: 600 }}>{l.name || l.title}</td>
                         <td style={{ padding: '6px 10px' }}>
                           <StatusBadge status={l.status} size="small" />
                         </td>
                         <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 600 }}>
-                          {formatCurrency(l.status === 'WON' ? l.won_amount : l.expected_value)}
+                          {String(l.status).toLowerCase() === 'won'
+                            ? formatCurrency(l.won_amount)
+                            : formatCurrency(l.expected_value)}
                         </td>
                       </tr>
                     ))

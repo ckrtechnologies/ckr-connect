@@ -1,5 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import mastersApi from './api.js';
+import React, { useState } from 'react';
+import {
+  useGetTagsQuery,
+  useCreateTagMutation,
+  useGetHolidaysQuery,
+  useCreateHolidayMutation,
+  useDeleteHolidayMutation,
+} from '../../core/api/apiSlice.js';
 import CommandBar from '../../core/layout/CommandBar.jsx';
 import { useBootstrap } from '../../core/context/BootstrapContext.jsx';
 import { toast } from '../../core/components/Toast.jsx';
@@ -9,71 +15,45 @@ export default function MastersPage() {
   const { refreshBootstrap } = useBootstrap();
   const [activeTab, setActiveTab] = useState('TAGS');
 
-  // Tags state
-  const [tags, setTags] = useState([]);
+  // Form states
   const [newTagName, setNewTagName] = useState('');
   const [newTagColor, setNewTagColor] = useState('#0078D4');
-  const [isAddingTag, setIsAddingTag] = useState(false);
-
-  // Holidays state
-  const [holidays, setHolidays] = useState([]);
   const [newHolidayName, setNewHolidayName] = useState('');
   const [newHolidayDate, setNewHolidayDate] = useState('');
-  const [isAddingHoliday, setIsAddingHoliday] = useState(false);
 
-  const [isLoading, setIsLoading] = useState(true);
+  // RTK Query Hooks
+  const { data: tagsRes, isLoading: tagsLoading, refetch: refetchTags } = useGetTagsQuery();
+  const { data: holidaysRes, isLoading: holidaysLoading, refetch: refetchHolidays } = useGetHolidaysQuery({
+    year: new Date().getFullYear(),
+  });
 
-  const fetchTags = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const res = await mastersApi.listTags();
-      if (res?.data) {
-        setTags(res.data.tags || res.data || []);
-      }
-    } catch {
-      toast.error('Failed to load offering tags');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const [createTag, { isLoading: isAddingTag }] = useCreateTagMutation();
+  const [createHoliday, { isLoading: isAddingHoliday }] = useCreateHolidayMutation();
+  const [deleteHoliday] = useDeleteHolidayMutation();
 
-  const fetchHolidays = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const res = await mastersApi.listHolidays({ year: new Date().getFullYear() });
-      if (res?.data) {
-        setHolidays(res.data.holidays || res.data || []);
-      }
-    } catch {
-      toast.error('Failed to load company holidays');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === 'TAGS') fetchTags();
-    else fetchHolidays();
-  }, [activeTab, fetchTags, fetchHolidays]);
+  const tags = Array.isArray(tagsRes?.data?.tags)
+    ? tagsRes.data.tags
+    : (Array.isArray(tagsRes?.data) ? tagsRes.data : []);
+  const holidays = Array.isArray(holidaysRes?.data?.holidays)
+    ? holidaysRes.data.holidays
+    : (Array.isArray(holidaysRes?.data) ? holidaysRes.data : []);
+  const isLoading = activeTab === 'TAGS' ? tagsLoading : holidaysLoading;
+  const refetch = activeTab === 'TAGS' ? refetchTags : refetchHolidays;
 
   const handleAddTag = async (e) => {
     e.preventDefault();
     if (!newTagName.trim()) return;
 
     try {
-      setIsAddingTag(true);
-      await mastersApi.createTag({
+      await createTag({
         name: newTagName.trim(),
-        color: newTagColor,
-      });
+        type: 'service',
+      }).unwrap();
       toast.success('Service tag created');
       setNewTagName('');
-      fetchTags();
       refreshBootstrap();
     } catch (err) {
-      toast.error(err.message || 'Failed to create tag');
-    } finally {
-      setIsAddingTag(false);
+      toast.error(err.data?.error || err.message || 'Failed to create tag');
     }
   };
 
@@ -82,32 +62,27 @@ export default function MastersPage() {
     if (!newHolidayName.trim() || !newHolidayDate) return;
 
     try {
-      setIsAddingHoliday(true);
-      await mastersApi.createHoliday({
+      await createHoliday({
         name: newHolidayName.trim(),
-        holiday_date: newHolidayDate,
-      });
+        date: newHolidayDate,
+      }).unwrap();
       toast.success('Company holiday scheduled');
       setNewHolidayName('');
       setNewHolidayDate('');
-      fetchHolidays();
       refreshBootstrap();
     } catch (err) {
-      toast.error(err.message || 'Failed to schedule holiday');
-    } finally {
-      setIsAddingHoliday(false);
+      toast.error(err.data?.error || err.message || 'Failed to schedule holiday');
     }
   };
 
   const handleDeleteHoliday = async (id) => {
     if (!window.confirm('Delete this scheduled company holiday?')) return;
     try {
-      await mastersApi.deleteHoliday(id);
+      await deleteHoliday(id).unwrap();
       toast.success('Holiday removed');
-      fetchHolidays();
       refreshBootstrap();
     } catch (err) {
-      toast.error('Failed to delete holiday');
+      toast.error(err.data?.error || err.message || 'Failed to delete holiday');
     }
   };
 
@@ -120,7 +95,7 @@ export default function MastersPage() {
           {
             label: 'Refresh',
             icon: <RefreshCw size={14} className={isLoading ? 'spin' : ''} />,
-            onClick: activeTab === 'TAGS' ? fetchTags : fetchHolidays,
+            onClick: refetch,
           },
         ]}
       />

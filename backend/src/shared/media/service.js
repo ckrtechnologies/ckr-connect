@@ -3,7 +3,7 @@ import path from 'path';
 import { mediaRepository } from './repository.js';
 
 export const mediaService = {
-  async getBrdStream(leadId, user) {
+  async getBrdStream(leadId, user, docId = null) {
     const lead = await mediaRepository.getLeadBrdInfo(leadId);
     if (!lead) {
       const err = new Error('Lead not found');
@@ -27,7 +27,34 @@ export const mediaService = {
       throw err;
     }
 
-    const filePath = path.resolve(process.cwd(), lead.brd_url);
+    let filePath;
+    let fileName;
+
+    // Check if brd_url is JSON array of documents
+    if (typeof lead.brd_url === 'string' && lead.brd_url.trim().startsWith('[')) {
+      try {
+        const docs = JSON.parse(lead.brd_url);
+        let selectedDoc = null;
+        if (docId) {
+          selectedDoc = docs.find((d) => d.id === docId);
+        }
+        if (!selectedDoc && docs.length > 0) {
+          selectedDoc = docs[docs.length - 1]; // latest
+        }
+        if (selectedDoc) {
+          filePath = path.resolve(process.cwd(), selectedDoc.file_path || selectedDoc.url);
+          fileName = selectedDoc.file_name || selectedDoc.original_name || path.basename(filePath);
+        }
+      } catch (e) {
+        // Fallback to direct path
+      }
+    }
+
+    if (!filePath) {
+      filePath = path.resolve(process.cwd(), lead.brd_url);
+      fileName = path.basename(filePath);
+    }
+
     if (!fs.existsSync(filePath)) {
       const err = new Error('Physical document file not found on server storage');
       err.statusCode = 404;
@@ -37,7 +64,7 @@ export const mediaService = {
 
     return {
       filePath,
-      fileName: path.basename(filePath)
+      fileName
     };
   }
 };

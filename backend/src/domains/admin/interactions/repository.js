@@ -159,5 +159,68 @@ export const adminInteractionsRepository = {
     `;
     const { rows } = await db.query(query, [date]);
     return rows;
+  },
+
+  async create(data, adminUserId) {
+    const client = await db.connect();
+    try {
+      await client.query('BEGIN');
+
+      const checkRes = await client.query(
+        `SELECT id, status, assigned_to FROM connect.leads WHERE id = $1`,
+        [data.lead_id]
+      );
+
+      if (!checkRes.rows[0]) {
+        const err = new Error('Lead not found');
+        err.statusCode = 404;
+        err.code = 'LEAD_NOT_FOUND';
+        throw err;
+      }
+
+      const currentLead = checkRes.rows[0];
+      const effectiveBdmId = data.bdm_id || currentLead.assigned_to || adminUserId;
+
+      const insertQuery = `
+        INSERT INTO connect.lead_interactions (
+          lead_id, bdm_id, type, call_result, call_result_label,
+          notes, status_snapshot, next_action, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+        RETURNING *
+      `;
+      const insertValues = [
+        data.lead_id,
+        effectiveBdmId,
+        data.type || data.channel || 'call',
+        data.call_result || data.outcome || 'connected',
+        data.call_result_label || null,
+        data.notes || data.discussion_notes || 'Activity logged',
+        currentLead.status,
+        data.next_action || null
+      ];
+
+      const { rows } = await client.query(insertQuery, insertValues);
+      const newInteraction = rows[0];
+
+      // Update lead touchpoints
+      await client.query(
+        `UPDATE connect.leads
+         SET 
+           last_followup_date = CURRENT_DATE,
+           next_followup_date = COALESCE($1, next_followup_date),
+           followup_count = COALESCE(followup_count, 0) + 1,
+           updated_at = NOW()
+         WHERE id = $2`,
+        [data.next_followup_date || null, data.lead_id]
+      );
+
+      await client.query('COMMIT');
+      return newInteraction;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 };

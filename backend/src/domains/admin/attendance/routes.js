@@ -6,7 +6,8 @@ import { updateAttendanceSchema } from './validation.js';
 const router = Router();
 
 router.get('/matrix', adminAttendanceController.getMatrix);
-router.put('/:id', validate(updateAttendanceSchema), adminAttendanceController.updateAttendance);
+router.post('/correct', adminAttendanceController.upsertAttendance);
 router.post('/upsert', validate(updateAttendanceSchema), adminAttendanceController.upsertAttendance);
+router.put('/:id', validate(updateAttendanceSchema), adminAttendanceController.updateAttendance);
 
 export default router;

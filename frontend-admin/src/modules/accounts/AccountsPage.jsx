@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import accountsApi from './api.js';
+import React, { useState } from 'react';
+import { useGetAccountsQuery } from '../../core/api/apiSlice.js';
 import CommandBar from '../../core/layout/CommandBar.jsx';
 import DataGrid from '../../core/components/DataGrid.jsx';
 import AccountDetailModal from './components/AccountDetailModal.jsx';
-import { toast } from '../../core/components/Toast.jsx';
 import { RefreshCw, Building2 } from 'lucide-react';
 
 const formatCurrency = (val) => {
@@ -16,59 +15,52 @@ const formatCurrency = (val) => {
 };
 
 export default function AccountsPage() {
-  const [accounts, setAccounts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: resData, isLoading, refetch } = useGetAccountsQuery();
+  const accounts = Array.isArray(resData?.data?.items)
+    ? resData.data.items
+    : (Array.isArray(resData?.data?.accounts)
+      ? resData.data.accounts
+      : (Array.isArray(resData?.data) ? resData.data : []));
   const [selectedAccountId, setSelectedAccountId] = useState(null);
-
-  const fetchAccounts = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const res = await accountsApi.listAccounts();
-      if (res?.data) {
-        setAccounts(res.data.accounts || res.data || []);
-      }
-    } catch (err) {
-      toast.error('Failed to load accounts directory');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchAccounts();
-  }, [fetchAccounts]);
 
   const columns = [
     {
-      field: 'company_name',
+      field: 'name',
       header: 'Corporate Account',
-      render: (val) => (
+      render: (val, row) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Building2 size={16} color="var(--color-primary)" />
-          <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{val}</span>
+          <div>
+            <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{val || row.company_name}</span>
+            {(row.city || row.state) && (
+              <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+                {[row.city, row.state].filter(Boolean).join(', ')}
+              </div>
+            )}
+          </div>
         </div>
       ),
     },
     {
-      field: 'total_deals',
+      field: 'total_leads',
       header: 'Total Opportunities',
-      render: (val) => <span style={{ fontWeight: 600 }}>{val || 0}</span>,
+      render: (val, row) => <span style={{ fontWeight: 600 }}>{val ?? row.total_deals ?? 0}</span>,
     },
     {
-      field: 'active_deals_count',
-      header: 'Active Pipeline Deals',
-      render: (val) => (
-        <span style={{ color: (val || 0) > 0 ? 'var(--color-primary)' : 'var(--color-text-secondary)', fontWeight: 600 }}>
-          {val || 0}
+      field: 'won_deals_count',
+      header: 'Closed-Won Deals',
+      render: (val, row) => (
+        <span style={{ color: (val || 0) > 0 ? 'var(--color-success)' : 'var(--color-text-secondary)', fontWeight: 600 }}>
+          {val ?? row.active_deals_count ?? 0}
         </span>
       ),
     },
     {
-      field: 'total_won_value',
+      field: 'lifetime_revenue',
       header: 'Lifetime Won Revenue',
-      render: (val) => (
+      render: (val, row) => (
         <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>
-          {formatCurrency(val)}
+          {formatCurrency(val ?? row.total_won_value)}
         </span>
       ),
     },
@@ -83,7 +75,7 @@ export default function AccountsPage() {
           {
             label: 'Refresh',
             icon: <RefreshCw size={14} className={isLoading ? 'spin' : ''} />,
-            onClick: fetchAccounts,
+            onClick: refetch,
           },
         ]}
       />

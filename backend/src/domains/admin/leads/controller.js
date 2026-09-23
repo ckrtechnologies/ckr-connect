@@ -53,7 +53,8 @@ export const adminLeadsController = {
 
   async bulkAssign(req, res, next) {
     try {
-      const { lead_ids, assigned_to } = req.body;
+      const { lead_ids } = req.body;
+      const assigned_to = req.body.assigned_to || req.body.bdm_id;
       const data = await adminLeadsService.bulkAssign(lead_ids, assigned_to, req.user?.id);
       return successResponse(res, data, `${data.length} leads assigned successfully`);
     } catch (err) {
@@ -82,6 +83,36 @@ export const adminLeadsController = {
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename="leads-export-${Date.now()}.csv"`);
       return res.send(csvString);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async deleteLead(req, res, next) {
+    try {
+      const { id } = req.params;
+      const data = await adminLeadsService.deleteLead(id);
+      return successResponse(res, data, 'Lead deleted successfully');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async uploadBrd(req, res, next) {
+    try {
+      const { id } = req.params;
+      const data = await adminLeadsService.uploadBrd(id, req.file);
+      return successResponse(res, data, 'Document uploaded successfully');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async deleteDocument(req, res, next) {
+    try {
+      const { id, docId } = req.params;
+      const data = await adminLeadsService.deleteDocument(id, docId);
+      return successResponse(res, data, 'Document deleted successfully');
     } catch (err) {
       next(err);
     }

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { adminLeadsController } from './controller.js';
 import { validate } from '../../../middlewares/validate.js';
-import { uploadCsv } from '../../../middlewares/upload.js';
+import { uploadCsv, uploadBrd } from '../../../middlewares/upload.js';
 import {
   createLeadSchema,
   updateLeadSchema,
@@ -20,5 +20,8 @@ router.post('/bulk-assign', validate(bulkAssignSchema), adminLeadsController.bul
 router.get('/:id', adminLeadsController.getLeadById);
 router.put('/:id', validate(updateLeadSchema), adminLeadsController.updateLead);
 router.patch('/:id/status', validate(updateStatusSchema), adminLeadsController.updateStatus);
+router.delete('/:id', adminLeadsController.deleteLead);
+router.post('/:id/brd', uploadBrd.single('file'), adminLeadsController.uploadBrd);
+router.delete('/:id/documents/:docId', adminLeadsController.deleteDocument);
 
 export default router;

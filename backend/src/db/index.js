@@ -27,9 +27,12 @@ export const pool = new Pool({
   database: secrets.db.database,
   user: secrets.db.user,
   password: secrets.db.password,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  max: 20, // Increased to 20 to handle concurrent API requests from the frontend dashboard
+  idleTimeoutMillis: 60000,
+  connectionTimeoutMillis: 15000,
+  keepAlive: true,
+  statement_timeout: 15000,
+  query_timeout: 15000,
   ssl: false,
   options: '-c search_path=connect,extensions,public'
 });

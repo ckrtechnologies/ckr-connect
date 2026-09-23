@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import attendanceApi from './api.js';
+import React, { useState } from 'react';
+import { useGetAttendanceMatrixQuery } from '../../core/api/apiSlice.js';
 import CommandBar from '../../core/layout/CommandBar.jsx';
 import AttendanceCorrectionModal from './components/AttendanceCorrectionModal.jsx';
-import { toast } from '../../core/components/Toast.jsx';
-import { ChevronLeft, ChevronRight, RefreshCw, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -12,32 +11,13 @@ const MONTH_NAMES = [
 
 export default function AttendancePage() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [matrixData, setMatrixData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Selected cell for correction
   const [correctionCell, setCorrectionCell] = useState(null);
 
   const month = currentDate.getMonth() + 1; // 1-12
   const year = currentDate.getFullYear();
 
-  const fetchMatrix = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const res = await attendanceApi.getMatrix({ month, year });
-      if (res?.data) {
-        setMatrixData(res.data);
-      }
-    } catch (err) {
-      toast.error('Failed to load attendance matrix');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [month, year]);
-
-  useEffect(() => {
-    fetchMatrix();
-  }, [fetchMatrix]);
+  const { data: resData, isLoading, refetch } = useGetAttendanceMatrixQuery({ month, year });
+  const matrixData = resData?.data;
 
   const handlePrevMonth = () => {
     setCurrentDate(new Date(year, month - 2, 1));
@@ -47,24 +27,29 @@ export default function AttendancePage() {
     setCurrentDate(new Date(year, month, 1));
   };
 
-  const daysInMonth = matrixData?.days_in_month || 30;
+  const daysInMonth = matrixData?.total_days || matrixData?.days_in_month || 30;
   const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-  const bdms = matrixData?.bdms || [];
+  const bdms = matrixData?.staff_attendance || matrixData?.bdms || [];
 
   const getCellConfig = (record) => {
     if (!record) return { label: '—', bg: 'transparent', color: 'var(--color-text-disabled)' };
-    switch (record.status) {
-      case 'PRESENT':
+    const st = String(record.status || '').toLowerCase();
+    switch (st) {
+      case 'present':
         return { label: 'P', bg: 'var(--color-success-bg)', color: 'var(--color-success)' };
-      case 'ABSENT':
+      case 'absent':
         return { label: 'A', bg: 'var(--color-error-bg)', color: 'var(--color-error)' };
-      case 'HALF_DAY':
+      case 'half_day':
+      case 'half day':
         return { label: 'HD', bg: 'var(--color-warning-bg)', color: '#797673' };
-      case 'LEAVE':
+      case 'leave':
+      case 'on_leave':
         return { label: 'L', bg: 'var(--color-info-bg)', color: 'var(--color-info)' };
-      case 'HOLIDAY':
+      case 'holiday':
         return { label: 'H', bg: 'var(--color-surface-alt)', color: 'var(--color-text-secondary)' };
+      case 'weekend':
+        return { label: 'W', bg: '#FFF0F0', color: 'var(--color-error)' };
       default:
         return { label: '—', bg: 'transparent', color: 'var(--color-text-disabled)' };
     }
@@ -79,7 +64,7 @@ export default function AttendancePage() {
           {
             label: 'Refresh',
             icon: <RefreshCw size={14} className={isLoading ? 'spin' : ''} />,
-            onClick: fetchMatrix,
+            onClick: refetch,
           },
         ]}
       >
@@ -232,46 +217,56 @@ export default function AttendancePage() {
                   </td>
                 </tr>
               ) : (
-                bdms.map((bdm) => (
-                  <tr
-                    key={bdm.id}
-                    style={{
-                      height: '38px',
-                      borderBottom: '1px solid var(--color-border)',
-                    }}
-                  >
-                    <td
+                bdms.map((bdm) => {
+                  const bdmId = bdm.id || bdm.bdm_id;
+                  const bdmName = bdm.bdm_name || bdm.full_name || bdm.name || 'BDM Executive';
+                  return (
+                    <tr
+                      key={bdmId}
                       style={{
-                        padding: '6px 16px',
-                        textAlign: 'left',
-                        fontWeight: 600,
-                        position: 'sticky',
-                        left: 0,
-                        backgroundColor: 'var(--color-surface)',
-                        borderRight: '1px solid var(--color-border)',
-                        whiteSpace: 'nowrap',
-                        zIndex: 1,
+                        height: '38px',
+                        borderBottom: '1px solid var(--color-border)',
                       }}
                     >
-                      {bdm.full_name}
-                    </td>
+                      <td
+                        style={{
+                          padding: '6px 16px',
+                          textAlign: 'left',
+                          fontWeight: 600,
+                          position: 'sticky',
+                          left: 0,
+                          backgroundColor: 'var(--color-surface)',
+                          borderRight: '1px solid var(--color-border)',
+                          whiteSpace: 'nowrap',
+                          zIndex: 1,
+                        }}
+                      >
+                        <div>{bdmName}</div>
+                        {bdm.employee_id && (
+                          <div style={{ fontSize: '10px', color: 'var(--color-text-secondary)', fontWeight: 400 }}>
+                            {bdm.employee_id}
+                          </div>
+                        )}
+                      </td>
 
-                    {daysArray.map((day) => {
-                      const record = bdm.records?.[day];
-                      const config = getCellConfig(record);
-                      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                      {daysArray.map((day) => {
+                        const record = Array.isArray(bdm.days)
+                          ? bdm.days.find((d) => d.day_number === day)
+                          : (bdm.records?.[day] || null);
+                        const config = getCellConfig(record);
+                        const dateStr = record?.date || `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-                      return (
-                        <td
-                          key={day}
-                          onClick={() =>
-                            setCorrectionCell({
-                              bdmId: bdm.id,
-                              bdmName: bdm.full_name,
-                              date: dateStr,
-                              currentRecord: record,
-                            })
-                          }
+                        return (
+                          <td
+                            key={day}
+                            onClick={() =>
+                              setCorrectionCell({
+                                bdmId,
+                                bdmName,
+                                date: dateStr,
+                                currentRecord: record,
+                              })
+                            }
                           style={{
                             padding: '4px',
                             cursor: 'pointer',
@@ -318,8 +313,9 @@ export default function AttendancePage() {
                       );
                     })}
                   </tr>
-                ))
-              )}
+                );
+              })
+            )}
             </tbody>
           </table>
         </div>
@@ -331,7 +327,7 @@ export default function AttendancePage() {
           isOpen={!!correctionCell}
           onClose={() => setCorrectionCell(null)}
           cellData={correctionCell}
-          onSuccess={fetchMatrix}
+          onSuccess={refetch}
         />
       )}
     </div>

@@ -22,5 +22,7 @@ router.use('/attendance', adminAttendanceRoutes);
 router.use('/interactions', adminInteractionsRoutes);
 router.use('/accounts', adminAccountsRoutes);
 router.use('/masters', adminMastersRoutes);
+// Direct aliases for /admin/tags and /admin/holidays
+router.use('/', adminMastersRoutes);
 
 export default router;

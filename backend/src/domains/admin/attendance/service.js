@@ -25,6 +25,7 @@ export const adminAttendanceService = {
           bdm_name: row.bdm_name,
           employee_id: row.employee_id,
           avatar_url: row.avatar_url,
+          date_of_joining: row.date_of_joining,
           days: {},
           summary: {
             present: 0,
@@ -77,8 +78,10 @@ export const adminAttendanceService = {
           else if (status === 'absent') bdmData.summary.absent++;
           else if (status === 'on_leave') bdmData.summary.on_leave++;
         } else if (dateStr < todayIso) {
-          status = 'absent';
-          bdmData.summary.absent++;
+          if (bdmData.date_of_joining && dateStr >= bdmData.date_of_joining) {
+            status = 'absent';
+            bdmData.summary.absent++;
+          }
         }
 
         fullDays.push({

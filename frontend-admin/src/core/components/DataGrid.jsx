@@ -37,7 +37,7 @@ export default function DataGrid({
 
   // Filtered & Sorted Data
   const processedData = useMemo(() => {
-    let result = [...data];
+    let result = Array.isArray(data) ? [...data] : [];
 
     // Local Search Filter
     if (searchTerm.trim()) {

@@ -214,6 +214,18 @@ export const adminLeadsRepository = {
    * Create lead
    */
   async create(data, creatorUserId) {
+    let tagId = data.tag_id;
+    if (!tagId) {
+      const { rows } = await db.query('SELECT id FROM connect.tags WHERE is_active = true ORDER BY name ASC LIMIT 1');
+      tagId = rows[0]?.id;
+    }
+
+    let creator = creatorUserId;
+    if (!creator) {
+      const { rows } = await db.query("SELECT id FROM connect.users WHERE role = 'admin' LIMIT 1");
+      creator = rows[0]?.id;
+    }
+
     const query = `
       INSERT INTO connect.leads (
         name, company_name, account_id, phone, email, city, state,
@@ -225,15 +237,15 @@ export const adminLeadsRepository = {
     `;
     const values = [
       data.name,
-      data.company_name || 'Self',
+      data.company_name || data.name,
       data.account_id || null,
       data.phone,
       data.email || null,
       data.city || null,
       data.state || null,
       data.source || 'website',
-      data.tag_id || null,
-      data.sub_requirement || null,
+      tagId,
+      data.sub_requirement || data.notes || null,
       data.deal_type || 'new_business',
       data.assigned_to || null,
       data.status || 'new',
@@ -242,7 +254,7 @@ export const adminLeadsRepository = {
       data.expected_value || 0,
       data.won_amount || 0,
       data.next_followup_date || null,
-      creatorUserId || null
+      creator
     ];
 
     const { rows } = await db.query(query, values);
@@ -345,9 +357,9 @@ export const adminLeadsRepository = {
 
       for (const lead of rows) {
         await client.query(
-          `INSERT INTO connect.lead_assignment_history (lead_id, new_assigned_to, changed_by)
+          `INSERT INTO connect.lead_assignment_history (lead_id, assigned_to, assigned_by)
            VALUES ($1, $2, $3)`,
-          [lead.id, assignedTo, adminUserId || null]
+          [lead.id, assignedTo, adminUserId || assignedTo]
         );
       }
 
@@ -398,5 +410,27 @@ export const adminLeadsRepository = {
     } finally {
       client.release();
     }
+  },
+
+  /**
+   * Delete lead by ID (cascades to interactions & assignment history)
+   */
+  async delete(id) {
+    const { rows } = await db.query(
+      `DELETE FROM connect.leads WHERE id = $1 RETURNING id, name`,
+      [id]
+    );
+    return rows[0] || null;
+  },
+
+  /**
+   * Update BRD file path
+   */
+  async updateBrd(id, brdUrl) {
+    const { rows } = await db.query(
+      `UPDATE connect.leads SET brd_url = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+      [brdUrl, id]
+    );
+    return rows[0] || null;
   }
 };

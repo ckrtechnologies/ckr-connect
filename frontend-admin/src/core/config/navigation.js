@@ -1,102 +1,110 @@
 // Declarative Navigation Registry for CKR Connect Admin Portal
-// Designed for seamless plug-and-play addition of future modules (Finance, Marketing, Projects, Renewals)
+// Exactly matching Approved Prototype v0.1 (prototype/app.js lines 944-1000)
 
 export const NAVIGATION_SECTIONS = [
   {
-    id: 'sales',
-    title: 'SALES & PIPELINE',
+    id: 'core_operations',
+    title: 'Core Operations',
     items: [
       {
         id: 'dashboard',
-        label: 'Executive Dashboard',
+        label: 'Dashboard',
         path: '/dashboard',
+        screenId: 'A-02',
         icon: 'LayoutDashboard',
       },
       {
         id: 'leads',
-        label: 'Leads & Opportunities',
+        label: 'Leads',
         path: '/leads',
-        icon: 'Flame',
+        screenId: 'A-03',
+        icon: 'User',
       },
-      {
-        id: 'accounts',
-        label: 'Parent Accounts',
-        path: '/accounts',
-        icon: 'Building2',
-      },
-    ],
-  },
-  {
-    id: 'operations',
-    title: 'TEAM & OPERATIONS',
-    items: [
       {
         id: 'staff',
-        label: 'Staff & BDM Roster',
+        label: 'Staff (BDMs)',
         path: '/staff',
+        screenId: 'A-08',
         icon: 'Users',
       },
       {
         id: 'attendance',
-        label: 'Attendance Matrix',
+        label: 'Attendance',
         path: '/attendance',
-        icon: 'CalendarCheck',
+        screenId: 'A-11',
+        icon: 'Calendar',
       },
-      {
-        id: 'interactions',
-        label: 'Telecalling Ledger',
-        path: '/reports',
-        icon: 'PhoneCall',
-      },
-    ],
-  },
-  {
-    id: 'settings',
-    title: 'CONFIGURATION & MASTERS',
-    items: [
       {
         id: 'masters',
-        label: 'Tags & Holiday Masters',
+        label: 'Masters (Tags)',
         path: '/masters',
-        icon: 'SlidersHorizontal',
+        screenId: 'A-10',
+        icon: 'Tag',
       },
     ],
   },
-  // Future Upgrades (Phase 2) — Pluggable entries
   {
-    id: 'future_phase2',
-    title: 'EXPANSION (PHASE 2)',
+    id: 'reports',
+    title: 'Reports',
     items: [
       {
+        id: 'daily_interactions',
+        label: 'Daily Interactions',
+        path: '/reports',
+        screenId: 'A-19',
+        icon: 'Clock',
+      },
+      {
+        id: 'daily_reports',
+        label: 'Daily Reports',
+        path: '/reports',
+        screenId: 'A-16',
+        icon: 'FileText',
+      },
+      {
+        id: 'export_analytics',
+        label: 'Export & Analytics',
+        path: '/reports',
+        screenId: 'A-15',
+        icon: 'Download',
+      },
+    ],
+  },
+  {
+    id: 'reserved_phase2',
+    title: 'Reserved (Phase 2)',
+    items: [
+      {
+        id: 'accounts',
+        label: 'Accounts & Renewals',
+        path: '/accounts',
+        screenId: 'A-17',
+        icon: 'Building2',
+        badge: 'Phase 2',
+        badgeClass: 'phase2-badge',
+      },
+      {
         id: 'finance',
-        label: 'Invoices & Milestones',
+        label: 'Finance & P&L',
         path: '/finance',
-        icon: 'Receipt',
-        phase2: true,
+        icon: 'DollarSign',
+        disabled: true,
         badge: 'Soon',
       },
       {
         id: 'marketing',
-        label: 'Meta & WhatsApp Ads',
+        label: 'Marketing',
         path: '/marketing',
         icon: 'Megaphone',
-        phase2: true,
+        disabled: true,
         badge: 'Soon',
       },
       {
         id: 'projects',
-        label: 'Project Delivery Handoff',
+        label: 'Projects',
         path: '/projects',
         icon: 'FolderKanban',
-        phase2: true,
-        badge: 'Soon',
-      },
-      {
-        id: 'renewals',
-        label: 'AMC & Subscriptions',
-        path: '/renewals',
-        icon: 'Repeat',
-        phase2: true,
+        disabled: true,
         badge: 'Soon',
       },
     ],

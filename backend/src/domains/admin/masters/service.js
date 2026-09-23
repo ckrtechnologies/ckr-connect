@@ -14,7 +14,7 @@ export const adminMastersService = {
       err.code = 'TAG_EXISTS';
       throw err;
     }
-    return await adminMastersRepository.create(data);
+    return await adminMastersRepository.createTag(data);
   },
 
   async updateTag(id, data) {
@@ -25,7 +25,7 @@ export const adminMastersService = {
       err.code = 'NOT_FOUND';
       throw err;
     }
-    return await adminMastersRepository.update(id, data);
+    return await adminMastersRepository.updateTag(id, data);
   },
 
   async deleteTag(id) {
@@ -52,7 +52,7 @@ export const adminMastersService = {
       err.code = 'HOLIDAY_EXISTS';
       throw err;
     }
-    return await adminMastersRepository.create(data);
+    return await adminMastersRepository.createHoliday(data);
   },
 
   async updateHoliday(id, data) {
@@ -63,7 +63,7 @@ export const adminMastersService = {
       err.code = 'NOT_FOUND';
       throw err;
     }
-    return await adminMastersRepository.update(id, data);
+    return await adminMastersRepository.updateHoliday(id, data);
   },
 
   async deleteHoliday(id) {

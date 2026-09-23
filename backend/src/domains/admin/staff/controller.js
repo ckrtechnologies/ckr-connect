@@ -64,5 +64,15 @@ export const adminStaffController = {
     } catch (err) {
       next(err);
     }
+  },
+
+  async deleteStaff(req, res, next) {
+    try {
+      const { id } = req.params;
+      const data = await adminStaffService.deleteStaff(id);
+      return successResponse(res, data, 'Staff member deleted successfully');
+    } catch (err) {
+      next(err);
+    }
   }
 };

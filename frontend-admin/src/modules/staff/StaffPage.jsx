@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import staffApi from './api.js';
+import React, { useState } from 'react';
+import { useGetStaffQuery, useUpdateStaffMutation } from '../../core/api/apiSlice.js';
 import CommandBar from '../../core/layout/CommandBar.jsx';
 import DataGrid from '../../core/components/DataGrid.jsx';
 import StatusBadge from '../../core/components/StatusBadge.jsx';
@@ -18,47 +18,36 @@ const formatCurrency = (val) => {
 };
 
 export default function StaffPage() {
-  const [staff, setStaff] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: resData, isLoading, refetch } = useGetStaffQuery();
+  const [updateStaff] = useUpdateStaffMutation();
+  const staff = Array.isArray(resData?.data?.items)
+    ? resData.data.items
+    : (Array.isArray(resData?.data?.staff)
+      ? resData.data.staff
+      : (Array.isArray(resData?.data) ? resData.data : []));
   const [activeTab, setActiveTab] = useState('ALL');
 
   // Modals
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [selectedStaffForReset, setSelectedStaffForReset] = useState(null);
 
-  const fetchStaff = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const res = await staffApi.listStaff();
-      if (res?.data) {
-        setStaff(res.data.staff || res.data || []);
-      }
-    } catch (err) {
-      toast.error('Failed to load staff roster');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchStaff();
-  }, [fetchStaff]);
-
   const handleToggleActive = async (member) => {
+    const memberName = member.name || member.full_name || 'Staff member';
     try {
-      await staffApi.updateStaff(member.id, {
+      await updateStaff({
+        id: member.id,
         is_active: !member.is_active,
-      });
-      toast.success(`${member.full_name} is now ${!member.is_active ? 'Active' : 'Inactive'}`);
-      fetchStaff();
+      }).unwrap();
+      toast.success(`${memberName} is now ${!member.is_active ? 'Active' : 'Inactive'}`);
     } catch (err) {
       toast.error('Failed to update status');
     }
   };
 
   const filteredStaff = staff.filter((s) => {
-    if (activeTab === 'BDM') return s.role === 'BDM';
-    if (activeTab === 'ADMIN') return s.role === 'ADMIN' || s.role === 'SUPER_ADMIN';
+    const r = String(s.role || '').toLowerCase();
+    if (activeTab === 'BDM') return r === 'bdm';
+    if (activeTab === 'ADMIN') return r === 'admin' || r === 'super_admin';
     return true;
   });
 
@@ -66,41 +55,46 @@ export default function StaffPage() {
     {
       field: 'full_name',
       header: 'Staff Name',
-      render: (val, row) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div
-            style={{
-              width: '26px',
-              height: '26px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--color-primary-light)',
-              color: 'var(--color-primary)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '11px',
-              fontWeight: 700,
-            }}
-          >
-            {val ? val[0].toUpperCase() : 'U'}
+      render: (val, row) => {
+        const displayName = val || row.name || 'Unnamed';
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div
+              style={{
+                width: '26px',
+                height: '26px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--color-primary-light)',
+                color: 'var(--color-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '11px',
+                fontWeight: 700,
+              }}
+            >
+              {displayName[0]?.toUpperCase() || 'U'}
+            </div>
+            <div>
+              <div style={{ fontWeight: 600 }}>{displayName}</div>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+                {row.employee_id ? `${row.employee_id} · ` : ''}{row.email}
+              </div>
+            </div>
           </div>
-          <div>
-            <div style={{ fontWeight: 600 }}>{val}</div>
-            <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>{row.email}</div>
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       field: 'role',
       header: 'Role',
-      render: (val) => <StatusBadge status={val} />,
+      render: (val) => <StatusBadge status={String(val || '').toUpperCase()} />,
     },
     {
       field: 'sales_target',
       header: 'Monthly Quota',
       render: (val, row) =>
-        row.role === 'BDM' ? (
+        String(row.role || '').toLowerCase() === 'bdm' ? (
           <span style={{ fontWeight: 600 }}>{formatCurrency(val)}</span>
         ) : (
           <span style={{ color: 'var(--color-text-secondary)' }}>N/A (Admin)</span>
@@ -177,7 +171,7 @@ export default function StaffPage() {
           {
             label: 'Refresh',
             icon: <RefreshCw size={14} className={isLoading ? 'spin' : ''} />,
-            onClick: fetchStaff,
+            onClick: refetch,
           },
         ]}
       />
@@ -199,7 +193,7 @@ export default function StaffPage() {
       <InviteStaffModal
         isOpen={isInviteOpen}
         onClose={() => setIsInviteOpen(false)}
-        onSuccess={fetchStaff}
+        onSuccess={refetch}
       />
 
       {/* Reset Password Modal */}

@@ -1,6 +1,21 @@
 import { db } from '../../../db/index.js';
 
+const toTimestamp = (date, val) => {
+  if (!val) return null;
+  if (typeof val === 'string') {
+    if (val.includes('-') && (val.includes('T') || val.includes(' '))) {
+      return new Date(val).toISOString();
+    }
+    if (val.includes(':')) {
+      const timePart = val.length === 5 ? `${val}:00` : val;
+      return `${date} ${timePart}`;
+    }
+  }
+  return val;
+};
+
 export const adminAttendanceRepository = {
+
   async findMonthlyRecords(year, month) {
     const { rows } = await db.query(
       `SELECT 
@@ -9,6 +24,7 @@ export const adminAttendanceRepository = {
          u.name AS bdm_name,
          u.employee_id,
          u.profile_photo_url AS avatar_url,
+         u.date_of_joining::text AS date_of_joining,
          a.date::text AS date,
          a.check_in_time AS punch_in,
          a.check_out_time AS punch_out,
@@ -67,8 +83,8 @@ export const adminAttendanceRepository = {
        RETURNING *`,
       [
         data.status,
-        data.punch_in || data.check_in_time || null,
-        data.punch_out || data.check_out_time || null,
+        toTimestamp(data.date, data.punch_in || data.check_in_time),
+        toTimestamp(data.date, data.punch_out || data.check_out_time),
         data.correction_reason,
         adminUserId,
         id
@@ -95,8 +111,8 @@ export const adminAttendanceRepository = {
         bdmId,
         date,
         data.status,
-        data.punch_in || data.check_in_time || null,
-        data.punch_out || data.check_out_time || null,
+        toTimestamp(date, data.punch_in || data.check_in_time),
+        toTimestamp(date, data.punch_out || data.check_out_time),
         data.correction_reason,
         adminUserId
       ]

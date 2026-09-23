@@ -1,7 +1,24 @@
 import fs from 'fs';
+import crypto from 'crypto';
 import csvParser from 'csv-parser';
 import { adminLeadsRepository } from './repository.js';
 import { db } from '../../../db/index.js';
+
+const parseDocuments = (brd_url, fallbackDate) => {
+  if (!brd_url) return [];
+  try {
+    if (brd_url.startsWith('[')) {
+      return JSON.parse(brd_url);
+    }
+  } catch {}
+  return [{
+    id: 'doc-initial',
+    name: brd_url.split('/').pop(),
+    url: brd_url,
+    size: 0,
+    uploaded_at: fallbackDate || new Date().toISOString()
+  }];
+};
 
 export const adminLeadsService = {
   async listLeads(queryParams) {
@@ -44,17 +61,53 @@ export const adminLeadsService = {
       err.code = 'LEAD_NOT_FOUND';
       throw err;
     }
-    return lead;
+    const docs = parseDocuments(lead.brd_url, lead.created_at);
+    return {
+      ...lead,
+      documents: docs,
+      brd_url: docs.length > 0 ? docs[docs.length - 1].url : lead.brd_url
+    };
   },
 
   async createLead(data, creatorUserId) {
+    let effectiveCreator = creatorUserId;
+    if (!effectiveCreator) {
+      const { rows } = await db.query("SELECT id FROM connect.users WHERE role = 'admin' LIMIT 1");
+      effectiveCreator = rows[0]?.id;
+    }
+
     if (!data.tag_id) {
       const { rows } = await db.query('SELECT id FROM connect.tags WHERE is_active = true ORDER BY name ASC LIMIT 1');
       if (rows[0]) {
         data.tag_id = rows[0].id;
+      } else {
+        // Fallback: create a default tag if none exists
+        const newTag = await db.query("INSERT INTO connect.tags (name, type) VALUES ('General Software & Services', 'service') ON CONFLICT (name) DO UPDATE SET is_active = true RETURNING id");
+        data.tag_id = newTag.rows[0]?.id;
       }
     }
-    return await adminLeadsRepository.create(data, creatorUserId);
+
+    const initialNotes = data.notes || data.discussion_notes || data.sub_requirement || '';
+    if (initialNotes && !data.sub_requirement) {
+      data.sub_requirement = initialNotes;
+    }
+
+    const createdLead = await adminLeadsRepository.create(data, effectiveCreator);
+
+    if (initialNotes && createdLead?.id && effectiveCreator) {
+      try {
+        await db.query(
+          `INSERT INTO connect.lead_interactions (
+            lead_id, bdm_id, type, notes, call_result, call_result_type, status_snapshot
+          ) VALUES ($1, $2, 'call', $3, 'Requirement Captured', 'positive', 'new')`,
+          [createdLead.id, effectiveCreator, initialNotes]
+        );
+      } catch (err) {
+        console.warn('[Leads Service] Non-critical interaction log note:', err.message);
+      }
+    }
+
+    return createdLead;
   },
 
   async updateLead(id, data) {
@@ -202,5 +255,65 @@ export const adminLeadsService = {
     ]);
 
     return [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  },
+
+  async deleteLead(id) {
+    const existing = await adminLeadsRepository.findById(id);
+    if (!existing) {
+      const err = new Error('Lead not found');
+      err.statusCode = 404;
+      err.code = 'LEAD_NOT_FOUND';
+      throw err;
+    }
+    return await adminLeadsRepository.delete(id);
+  },
+
+  async uploadBrd(id, file) {
+    const existing = await adminLeadsRepository.findById(id);
+    if (!existing) {
+      const err = new Error('Lead not found');
+      err.statusCode = 404;
+      err.code = 'LEAD_NOT_FOUND';
+      throw err;
+    }
+    if (!file) {
+      const err = new Error('No file uploaded');
+      err.statusCode = 400;
+      err.code = 'FILE_REQUIRED';
+      throw err;
+    }
+    const relativePath = file.path.replace(/\\/g, '/');
+    const docs = parseDocuments(existing.brd_url, existing.created_at);
+    const newDoc = {
+      id: crypto.randomUUID(),
+      name: file.originalname || file.filename,
+      url: relativePath,
+      size: file.size,
+      uploaded_at: new Date().toISOString()
+    };
+    docs.push(newDoc);
+    const updated = await adminLeadsRepository.updateBrd(id, JSON.stringify(docs));
+    return {
+      ...updated,
+      documents: docs,
+      brd_url: relativePath
+    };
+  },
+
+  async deleteDocument(leadId, docId) {
+    const existing = await adminLeadsRepository.findById(leadId);
+    if (!existing) {
+      const err = new Error('Lead not found');
+      err.statusCode = 404;
+      err.code = 'LEAD_NOT_FOUND';
+      throw err;
+    }
+    const docs = parseDocuments(existing.brd_url, existing.created_at).filter(d => d.id !== docId);
+    const updated = await adminLeadsRepository.updateBrd(leadId, docs.length > 0 ? JSON.stringify(docs) : null);
+    return {
+      ...updated,
+      documents: docs,
+      brd_url: docs.length > 0 ? docs[docs.length - 1].url : null
+    };
   }
 };
