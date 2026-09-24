@@ -1,4 +1,4 @@
-import { baseApi } from '../../shared/store/api.js';
+import { baseApi } from '../../shared/store/baseApi.js';
 
 export const notificationsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -6,14 +6,14 @@ export const notificationsApi = baseApi.injectEndpoints({
       query: () => '/bdm/notifications',
       providesTags: ['Notifications'],
     }),
-    markNotificationRead: builder.mutation({
+    markNotificationAsRead: builder.mutation({
       query: (id) => ({
         url: `/bdm/notifications/${id}/read`,
         method: 'PATCH',
       }),
       invalidatesTags: ['Notifications'],
     }),
-    markAllNotificationsRead: builder.mutation({
+    markAllNotificationsAsRead: builder.mutation({
       query: () => ({
         url: '/bdm/notifications/mark-all-read',
         method: 'POST',
@@ -21,12 +21,11 @@ export const notificationsApi = baseApi.injectEndpoints({
       invalidatesTags: ['Notifications'],
     }),
   }),
+  overrideExisting: false,
 });
 
 export const {
   useGetNotificationsQuery,
-  useMarkNotificationReadMutation,
-  useMarkAllNotificationsReadMutation,
+  useMarkNotificationAsReadMutation,
+  useMarkAllNotificationsAsReadMutation,
 } = notificationsApi;
-
-export default notificationsApi;

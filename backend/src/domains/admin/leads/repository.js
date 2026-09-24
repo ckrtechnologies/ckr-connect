@@ -487,5 +487,15 @@ export const adminLeadsRepository = {
     } finally {
       client.release();
     }
+  },
+
+  async bulkDelete(leadIds) {
+    // Delete related records first (lead_tags, interactions, etc.)
+    await db.query('DELETE FROM connect.lead_tags WHERE lead_id = ANY($1::uuid[])', [leadIds]);
+    await db.query('DELETE FROM connect.lead_interactions WHERE lead_id = ANY($1::uuid[])', [leadIds]);
+    await db.query('DELETE FROM connect.lead_status_history WHERE lead_id = ANY($1::uuid[])', [leadIds]);
+    await db.query('DELETE FROM connect.lead_assignment_history WHERE lead_id = ANY($1::uuid[])', [leadIds]);
+    const { rowCount } = await db.query('DELETE FROM connect.leads WHERE id = ANY($1::uuid[])', [leadIds]);
+    return rowCount;
   }
 };

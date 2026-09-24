@@ -1,25 +1,29 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors, radius, spacing, typography } from '../../../shared/theme/index.js';
+import { colors } from '../../../shared/theme/colors.js';
+import { typography } from '../../../shared/theme/typography.js';
+import { spacing } from '../../../shared/theme/spacing.js';
+import { radius } from '../../../shared/theme/radius.js';
 
-export const UntouchedAlertBanner = ({ count, onCallNow }) => {
-  if (!count || count <= 0) return null;
+export const UntouchedAlertBanner = ({ count = 0, onCallNowPress }) => {
+  if (count <= 0) return null;
 
   return (
     <View style={styles.banner}>
       <View style={styles.textContainer}>
-        <Text style={styles.title}>⚡ {count} Inbound Leads Untouched!</Text>
+        <Text style={styles.title}>
+          ⚡ {count} Inbound Lead{count === 1 ? '' : 's'} Untouched!
+        </Text>
         <Text style={styles.subtitle}>
           Assigned today. Dial immediately to meet daily first-response target!
         </Text>
       </View>
-
       <TouchableOpacity
-        style={styles.callNowBtn}
-        onPress={onCallNow}
+        style={styles.callBtn}
+        onPress={onCallNowPress}
         activeOpacity={0.8}
       >
-        <Text style={styles.callNowBtnText}>Call Now ({count}) ›</Text>
+        <Text style={styles.callBtnText}>Call Now ({count}) ›</Text>
       </TouchableOpacity>
     </View>
   );
@@ -27,47 +31,40 @@ export const UntouchedAlertBanner = ({ count, onCallNow }) => {
 
 const styles = StyleSheet.create({
   banner: {
-    backgroundColor: colors.urgentAmberBg,
-    borderColor: colors.urgentAmberBorder,
+    backgroundColor: colors.untouchedBg,
+    borderColor: colors.untouchedBorder,
     borderWidth: 1,
     borderRadius: radius.md,
     padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
-    marginVertical: spacing.xs,
+    marginBottom: spacing.md,
   },
   textContainer: {
     flex: 1,
+    marginRight: spacing.sm,
   },
   title: {
     ...typography.captionBold,
+    color: colors.untouchedText,
     fontSize: 13,
-    color: colors.urgentAmberText,
   },
   subtitle: {
     ...typography.caption,
-    fontSize: 11,
     color: '#92400E',
     marginTop: 2,
-    lineHeight: 15,
+    fontSize: 11,
   },
-  callNowBtn: {
-    backgroundColor: colors.urgentAmber,
-    borderColor: colors.urgentAmberDark,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: radius.xs,
-    justifyContent: 'center',
-    alignItems: 'center',
+  callBtn: {
+    backgroundColor: colors.untouchedBtn,
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
   },
-  callNowBtnText: {
+  callBtnText: {
     ...typography.captionBold,
-    color: '#FFFFFF',
+    color: colors.textOnPrimary,
     fontSize: 11,
   },
 });
-
-export default UntouchedAlertBanner;

@@ -11,7 +11,8 @@
 - **Owner:** Chandan Mallik, Co-Founder & CTO, CKR Technologies
 - **Docs:** `docs/PRD.md`, `docs/SCREEN-MAP.md`, `docs/DESIGN.md`, `docs/API.md`, `docs/SCHEMA.md`, `docs/TEST-CASES.md`
 - **Roles:** Admin, BDM
-- **Repos:** three — `admin-web/`, `bdm-web/`, `backend/` (see PRD §2)
+- **Phase:** Phase 1 (Admin web app) is complete. Currently working on Phase 2 (BDM Mobile-first web app).
+- **Repos:** three — `admin-web/` (Done), `bdm-web/` (Active), `backend/` (Active, extending as needed)
 
 ---
 

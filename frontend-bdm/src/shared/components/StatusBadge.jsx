@@ -1,68 +1,109 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, radius, typography } from '../theme/index.js';
+import { colors } from '../theme/colors.js';
+import { typography } from '../theme/typography.js';
+import { spacing } from '../theme/spacing.js';
+import { radius } from '../theme/radius.js';
 
-/**
- * StatusBadge Component
- * Pairs semantic status color with its matching tint background
- *
- * @param {object} props
- * @param {string} props.status
- * @param {string} [props.label] Optional custom label
- * @param {object} [props.style]
- */
-export const StatusBadge = ({ status = 'new', label, style }) => {
-  const normStatus = (status || '').toLowerCase().replace('-', '_');
+export const StatusBadge = ({ status, label = null, style = null }) => {
+  const norm = String(status || '').toLowerCase();
 
-  const getBadgeColors = () => {
-    switch (normStatus) {
+  const getStatusConfig = () => {
+    switch (norm) {
       case 'won':
       case 'present':
-        return { bg: colors.successBg, text: colors.success, border: '#C3E6CB' };
-      case 'follow_up':
-      case 'negotiation':
-      case 'half_day':
-        return { bg: colors.warningBg, text: colors.urgentAmberText, border: colors.urgentAmberBorder };
-      case 'proposal':
-        return { bg: colors.proposalBg, text: colors.proposal, border: '#D6C7F7' };
+        return {
+          bg: colors.successBg,
+          text: colors.successText,
+          border: '#C3E6CB',
+          displayLabel: label || (norm === 'won' ? 'Won' : 'Present'),
+        };
       case 'lost':
       case 'absent':
-        return { bg: colors.errorBg, text: colors.error, border: '#F5C6CB' };
-      case 'invalid':
-        return { bg: colors.surfaceAlt, text: colors.textSecondary, border: colors.border };
-      case 'leave':
-      case 'holiday':
-        return { bg: colors.surfaceAlt, text: colors.textSecondary, border: colors.border };
-      case 'new':
+        return {
+          bg: colors.errorBg,
+          text: colors.errorText,
+          border: colors.errorBorder,
+          displayLabel: label || (norm === 'lost' ? 'Lost' : 'Absent'),
+        };
+      case 'follow_up':
+      case 'half_day':
+      case 'warning':
+        return {
+          bg: colors.warningBg,
+          text: colors.warningText,
+          border: colors.warningBorder,
+          displayLabel: label || (norm === 'follow_up' ? 'Follow-up' : 'Half Day'),
+        };
+      case 'proposal':
+      case 'negotiation':
+        return {
+          bg: '#F3EEFC',
+          text: '#6E56CF',
+          border: '#D6C7F7',
+          displayLabel: label || 'Proposal',
+        };
       case 'contacted':
+        return {
+          bg: colors.infoBg,
+          text: colors.infoText,
+          border: '#C7E0F4',
+          displayLabel: label || 'Contacted',
+        };
+      case 'invalid':
+        return {
+          bg: '#EDEBE9',
+          text: '#605E5C',
+          border: '#C8C6C4',
+          displayLabel: label || 'Invalid',
+        };
+      case 'holiday':
+        return {
+          bg: '#EBF3FC',
+          text: '#004E8C',
+          border: '#C7E0F4',
+          displayLabel: label || 'Holiday',
+        };
+      case 'new':
       default:
-        return { bg: colors.infoBg, text: colors.info, border: '#B8DAFF' };
+        return {
+          bg: colors.primaryLight,
+          text: colors.primary,
+          border: '#C7E0F4',
+          displayLabel: label || 'New',
+        };
     }
   };
 
-  const { bg, text, border } = getBadgeColors();
-  const displayLabel = label || normStatus.replace('_', ' ').toUpperCase();
+  const config = getStatusConfig();
 
   return (
-    <View style={[styles.badge, { backgroundColor: bg, borderColor: border }, style]}>
-      <Text style={[styles.badgeText, { color: text }]}>{displayLabel}</Text>
+    <View
+      style={[
+        styles.badge,
+        { backgroundColor: config.bg, borderColor: config.border },
+        style,
+      ]}
+    >
+      <Text style={[styles.badgeText, { color: config.text }]}>
+        {config.displayLabel}
+      </Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   badge: {
-    paddingHorizontal: 7,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 2,
-    borderRadius: radius.xs,
+    borderRadius: radius.pill,
     borderWidth: 1,
     alignSelf: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   badgeText: {
     ...typography.overline,
-    fontSize: 10,
     fontWeight: '700',
   },
 });
-
-export default StatusBadge;

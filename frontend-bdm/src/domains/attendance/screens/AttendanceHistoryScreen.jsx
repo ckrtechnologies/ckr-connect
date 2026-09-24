@@ -1,102 +1,201 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { colors, spacing, typography } from '../../../shared/theme/index.js';
-import { FluentCard, StatusBadge } from '../../../shared/components/index.js';
-import { INITIAL_ATTENDANCE } from '../../../shared/utils/mockSeedData.js';
-import { formatDate } from '../../../shared/utils/formatters.js';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  TouchableOpacity,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '../../../shared/theme/colors.js';
+import { typography } from '../../../shared/theme/typography.js';
+import { spacing } from '../../../shared/theme/spacing.js';
+import { FluentCard } from '../../../shared/components/FluentCard.jsx';
+import { AttendanceHistoryItem } from '../components/AttendanceHistoryItem.jsx';
+import { useGetMyAttendanceHistoryQuery } from '../api.js';
 
-export const AttendanceHistoryScreen = () => {
-  const records = INITIAL_ATTENDANCE;
-  const presentCount = records.filter((r) => r.status === 'present').length;
+export const AttendanceHistoryScreen = ({ navigation }) => {
+  const now = new Date();
+  const [year] = useState(now.getFullYear());
+  const [month] = useState(now.getMonth() + 1);
+
+  const { data: historyData, isLoading, refetch, isFetching } = useGetMyAttendanceHistoryQuery({
+    year,
+    month,
+  });
+
+  const summary = historyData?.summary || {
+    present: 0,
+    half_day: 0,
+    absent: 0,
+    holidays: 0,
+  };
+
+  const days = historyData?.days || [];
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Monthly Summary Card */}
-        <FluentCard style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>September 2026 Summary</Text>
-          <Text style={styles.summaryCount}>{presentCount} Days Present</Text>
-        </FluentCard>
+    <SafeAreaView style={styles.container}>
+      {/* Top Header */}
+      <View style={styles.headerBar}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.backText}>‹ Attendance</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Monthly Audit</Text>
+        <View style={styles.placeholder} />
+      </View>
 
-        {/* Daily Log Feed */}
-        <Text style={styles.sectionTitle}>ATTENDANCE RECORDS</Text>
-
-        {records.map((item) => {
-          const isToday = item.date === '2026-09-22';
-          const timeText = item.check_in_time
-            ? `In: 09:${item.date.slice(-2)} AM ${
-                item.check_out_time ? '· Out: 06:45 PM' : '· Active'
-              }`
-            : 'No punch recorded';
-
-          return (
-            <FluentCard key={item.id} style={styles.itemCard}>
-              <View style={styles.leftCol}>
-                <Text style={styles.dateText}>
-                  {formatDate(item.date)} {isToday ? '(Today)' : ''}
+      <FlatList
+        data={days}
+        keyExtractor={(item) => item.date}
+        contentContainerStyle={styles.listContent}
+        onRefresh={refetch}
+        refreshing={isFetching}
+        ListHeaderComponent={
+          <View>
+            {/* Monthly Summary Card */}
+            <FluentCard style={styles.summaryCard}>
+              <View style={styles.summaryHeader}>
+                <Text style={styles.summaryTitle}>
+                  {now.toLocaleString('en-IN', { month: 'long', year: 'numeric' })} Summary
                 </Text>
-                <Text style={styles.timeText}>{timeText}</Text>
+                <Text style={styles.presentCount}>
+                  {summary.present} Days Present
+                </Text>
               </View>
 
-              <StatusBadge status={item.status} />
+              <View style={styles.summaryStatsRow}>
+                <View style={styles.statCol}>
+                  <Text style={styles.statNum}>{summary.present}</Text>
+                  <Text style={styles.statLabel}>Present</Text>
+                </View>
+                <View style={styles.statCol}>
+                  <Text style={[styles.statNum, { color: colors.warning }]}>
+                    {summary.half_day}
+                  </Text>
+                  <Text style={styles.statLabel}>Half-Day</Text>
+                </View>
+                <View style={styles.statCol}>
+                  <Text style={[styles.statNum, { color: colors.error }]}>
+                    {summary.absent}
+                  </Text>
+                  <Text style={styles.statLabel}>Absent</Text>
+                </View>
+                <View style={styles.statCol}>
+                  <Text style={[styles.statNum, { color: colors.info }]}>
+                    {summary.holidays}
+                  </Text>
+                  <Text style={styles.statLabel}>Holidays</Text>
+                </View>
+              </View>
             </FluentCard>
-          );
-        })}
-      </ScrollView>
-    </View>
+
+            <Text style={styles.listTitle}>DAILY PUNCH LOGS</Text>
+          </View>
+        }
+        renderItem={({ item }) => <AttendanceHistoryItem item={item} />}
+        ListEmptyComponent={
+          isLoading ? (
+            <ActivityIndicator
+              size="large"
+              color={colors.primary}
+              style={styles.loader}
+            />
+          ) : (
+            <Text style={styles.emptyText}>No attendance records for this month.</Text>
+          )
+        }
+      />
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.canvas,
   },
-  scrollContent: {
-    padding: spacing.pagePaddingHorizontal,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
+  headerBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  backBtn: {
+    paddingVertical: spacing.xs,
+  },
+  backText: {
+    ...typography.bodyBold,
+    color: colors.primary,
+  },
+  headerTitle: {
+    ...typography.subtitle,
+    color: colors.textPrimary,
+  },
+  placeholder: {
+    width: 60,
+  },
+  listContent: {
+    padding: spacing.md,
+    paddingBottom: spacing.xxxl,
   },
   summaryCard: {
+    marginBottom: spacing.md,
+  },
+  summaryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.md,
   },
   summaryTitle: {
-    ...typography.bodyBold,
+    ...typography.subtitle,
     color: colors.textPrimary,
   },
-  summaryCount: {
-    ...typography.bodyBold,
-    color: colors.success,
+  presentCount: {
+    ...typography.captionBold,
+    color: colors.successText,
   },
-  sectionTitle: {
-    ...typography.overline,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-    fontSize: 10,
-    letterSpacing: 0.5,
-  },
-  itemCard: {
+  summaryStatsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+  },
+  statCol: {
     alignItems: 'center',
-    marginBottom: spacing.xs,
   },
-  leftCol: {
-    flex: 1,
+  statNum: {
+    ...typography.title,
+    fontWeight: '700',
+    color: colors.successText,
   },
-  dateText: {
-    ...typography.bodyBold,
-    color: colors.textPrimary,
-    fontSize: 13,
-  },
-  timeText: {
-    ...typography.caption,
+  statLabel: {
+    ...typography.overline,
     color: colors.textSecondary,
     marginTop: 2,
   },
+  listTitle: {
+    ...typography.overline,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  loader: {
+    marginTop: spacing.xl,
+  },
+  emptyText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.xl,
+  },
 });
-
-export default AttendanceHistoryScreen;

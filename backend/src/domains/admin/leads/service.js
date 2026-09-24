@@ -221,7 +221,7 @@ export const adminLeadsService = {
           if (leadName && phone) {
             results.push({
               name: leadName.trim(),
-              company_name: data.company_name ? data.company_name.trim() : 'Self',
+              company_name: data.company_name ? data.company_name.trim() : (data.name ? data.name.trim() : ''),
               email: data.email ? data.email.trim() : null,
               phone: phone.trim(),
               city: data.city ? data.city.trim() : null,

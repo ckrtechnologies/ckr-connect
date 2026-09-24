@@ -1,4 +1,4 @@
-import { baseApi } from '../../shared/store/api.js';
+import { baseApi } from '../../shared/store/baseApi.js';
 
 export const attendanceApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -11,23 +11,24 @@ export const attendanceApi = baseApi.injectEndpoints({
         url: '/bdm/attendance/punch-in',
         method: 'POST',
       }),
-      invalidatesTags: ['Attendance'],
+      invalidatesTags: ['Attendance', 'Dashboard'],
     }),
     punchOut: builder.mutation({
       query: () => ({
         url: '/bdm/attendance/punch-out',
         method: 'POST',
       }),
-      invalidatesTags: ['Attendance'],
+      invalidatesTags: ['Attendance', 'Dashboard'],
     }),
     getMyAttendanceHistory: builder.query({
-      query: (params = {}) => ({
+      query: ({ year, month } = {}) => ({
         url: '/bdm/attendance/my-history',
-        params,
+        params: { year, month },
       }),
       providesTags: ['Attendance'],
     }),
   }),
+  overrideExisting: false,
 });
 
 export const {
@@ -36,5 +37,3 @@ export const {
   usePunchOutMutation,
   useGetMyAttendanceHistoryQuery,
 } = attendanceApi;
-
-export default attendanceApi;

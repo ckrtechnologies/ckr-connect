@@ -1,331 +1,313 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
+  StyleSheet,
+  FlatList,
+  ScrollView,
   TextInput,
   TouchableOpacity,
-  ScrollView,
-  StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
-import { useSelector, useDispatch } from 'react-redux';
-import { colors, radius, spacing, typography } from '../../../shared/theme/index.js';
-import { FilterChip, EmptyState } from '../../../shared/components/index.js';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useDispatch, useSelector } from 'react-redux';
+import { colors } from '../../../shared/theme/colors.js';
+import { typography } from '../../../shared/theme/typography.js';
+import { spacing } from '../../../shared/theme/spacing.js';
+import { radius } from '../../../shared/theme/radius.js';
+import { FluentButton } from '../../../shared/components/FluentButton.jsx';
+import { FilterChip } from '../../../shared/components/FilterChip.jsx';
+import { EmptyState } from '../../../shared/components/EmptyState.jsx';
+import { LeadCardItem } from '../components/LeadCardItem.jsx';
+import { useGetMyLeadsQuery } from '../api.js';
 import {
-  setLeadsSearchQuery,
-  setLeadsFilterUrgency,
-  setLeadsFilterStage,
-  clearLeadsFilters,
-  setQuickAddModalOpen,
-} from '../../../shared/store/slices/uiSlice.js';
-import { INITIAL_LEADS } from '../../../shared/utils/mockSeedData.js';
+  setSearchQuery,
+  setUrgencyFilter,
+  setStageFilter,
+  resetFilters,
+} from '../slice.js';
+import { setQuickAddModalOpen } from '../../../shared/store/uiSlice.js';
 import { ROUTES } from '../../../shared/navigation/routes.js';
-import LeadCard from '../components/LeadCard.jsx';
-import QuickAddLeadModal from '../components/QuickAddLeadModal.jsx';
 
-export const MyLeadsScreen = ({ navigation }) => {
+export const MyLeadsScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
-  const searchQuery = useSelector((state) => state.ui.leadsSearchQuery);
-  const filterUrgency = useSelector((state) => state.ui.leadsFilterUrgency);
-  const filterStage = useSelector((state) => state.ui.leadsFilterStage);
+  const { searchQuery, urgencyFilter, stageFilter } = useSelector((state) => state.leads);
 
-  const [leadsList, setLeadsList] = useState(INITIAL_LEADS);
-
-  // Counts
-  const allCount = leadsList.length;
-  const overdueCount = leadsList.filter((l) => l.id === 'lead-102').length;
-  const dueTodayCount = leadsList.filter((l) => l.id === 'lead-101' || l.id === 'lead-110').length;
-  const wonCount = leadsList.filter((l) => (l.status || '').toUpperCase() === 'WON').length;
-  const untouchedCount = leadsList.filter(
-    (l) => (l.status || '').toUpperCase() === 'NEW' || l.followup_count === 0
-  ).length;
-  const followupCount = leadsList.filter((l) => (l.status || '').toUpperCase() === 'FOLLOW_UP').length;
-  const proposalCount = leadsList.filter(
-    (l) => (l.status || '').toUpperCase() === 'PROPOSAL' || (l.status || '').toUpperCase() === 'NEGOTIATION'
-  ).length;
-  const contactedCount = leadsList.filter((l) => (l.status || '').toUpperCase() === 'CONTACTED').length;
-
-  // Filter evaluation
-  let filtered = leadsList;
-  const q = (searchQuery || '').trim().toLowerCase();
-  if (q) {
-    filtered = filtered.filter(
-      (l) =>
-        (l.name && l.name.toLowerCase().includes(q)) ||
-        (l.company_name && l.company_name.toLowerCase().includes(q)) ||
-        (l.phone && l.phone.includes(q)) ||
-        (l.city && l.city.toLowerCase().includes(q))
-    );
-  }
-
-  if (filterUrgency === 'overdue') {
-    filtered = filtered.filter((l) => l.id === 'lead-102');
-  } else if (filterUrgency === 'today') {
-    filtered = filtered.filter((l) => l.id === 'lead-101' || l.id === 'lead-110');
-  } else if (filterUrgency === 'won') {
-    filtered = filtered.filter((l) => (l.status || '').toUpperCase() === 'WON');
-  }
-
-  if (filterStage !== 'all') {
-    if (filterStage === 'NEW') {
-      filtered = filtered.filter(
-        (l) => (l.status || '').toUpperCase() === 'NEW' || l.followup_count === 0
-      );
-    } else if (filterStage === 'PROPOSAL') {
-      filtered = filtered.filter(
-        (l) => (l.status || '').toUpperCase() === 'PROPOSAL' || (l.status || '').toUpperCase() === 'NEGOTIATION'
-      );
-    } else {
-      filtered = filtered.filter(
-        (l) => (l.status || '').toUpperCase() === filterStage.toUpperCase()
-      );
+  // Allow setting initial stage from route params (e.g. from Dashboard matrix click)
+  useEffect(() => {
+    if (route.params?.stageFilter) {
+      dispatch(setStageFilter(route.params.stageFilter));
     }
-  }
+  }, [route.params?.stageFilter]);
 
-  const hasActiveFilters = Boolean(q || filterUrgency !== 'all' || filterStage !== 'all');
+  const { data: leadsData, isLoading, refetch, isFetching } = useGetMyLeadsQuery({
+    search: searchQuery || undefined,
+    status: stageFilter !== 'all' ? stageFilter.toLowerCase() : undefined,
+  });
 
-  const handleSaveNewLead = (newLead, openDetail = false) => {
-    setLeadsList([newLead, ...leadsList]);
-    if (openDetail) {
-      navigation.navigate(ROUTES.LEAD_DETAIL, { leadId: newLead.id });
-    }
+  const rawLeads = leadsData?.items || [];
+
+  // Filter client-side by urgency chips
+  const filteredLeads = rawLeads.filter((l) => {
+    const isUntouched = (l.status || '').toLowerCase() === 'new' || l.followup_count === 0;
+    const isWon = (l.status || '').toLowerCase() === 'won';
+    const isOverdue = l.is_overdue || (l.next_followup_date && new Date(l.next_followup_date) < new Date());
+    const isDueToday = l.is_due_today;
+
+    if (urgencyFilter === 'overdue') return isOverdue;
+    if (urgencyFilter === 'today') return isDueToday;
+    if (urgencyFilter === 'won') return isWon;
+
+    if (stageFilter === 'NEW') return isUntouched;
+    return true;
+  });
+
+  const hasActiveFilters = searchQuery !== '' || urgencyFilter !== 'all' || stageFilter !== 'all';
+
+  const handleOpenLead = (leadId) => {
+    navigation.navigate(ROUTES.LEAD_DETAIL, { leadId });
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header Bar */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>My Pipeline</Text>
-          <Text style={styles.headerSubtitle}>({leadsList.length} leads assigned)</Text>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      {/* Top Header Bar */}
+      <View style={styles.topBar}>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>My Pipeline</Text>
+          <Text style={styles.subtitle}>
+            ({rawLeads.length} leads assigned)
+          </Text>
         </View>
-
-        <TouchableOpacity
-          style={styles.addLeadBtn}
+        <FluentButton
+          title="+ Add Lead"
           onPress={() => dispatch(setQuickAddModalOpen(true))}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.addLeadBtnText}>+ Add Lead</Text>
-        </TouchableOpacity>
+          variant="primary"
+          size="small"
+          style={styles.addLeadBtn}
+        />
       </View>
 
       {/* Search Input Box */}
-      <View style={styles.searchContainer}>
+      <View style={styles.searchBox}>
         <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
           style={styles.searchInput}
           placeholder="Search school, contact, phone, city..."
           placeholderTextColor={colors.textDisabled}
           value={searchQuery}
-          onChangeText={(val) => dispatch(setLeadsSearchQuery(val))}
+          onChangeText={(txt) => dispatch(setSearchQuery(txt))}
         />
         {searchQuery ? (
-          <TouchableOpacity onPress={() => dispatch(setLeadsSearchQuery(''))}>
-            <Text style={styles.clearSearchIcon}>✕</Text>
+          <TouchableOpacity
+            onPress={() => dispatch(setSearchQuery(''))}
+            style={styles.clearBtn}
+          >
+            <Text style={styles.clearBtnText}>✕</Text>
           </TouchableOpacity>
         ) : null}
       </View>
 
-      {/* Scrollable Filter Chips - Urgency */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipsScroll}
-      >
-        <FilterChip
-          label={`All (${allCount})`}
-          active={filterUrgency === 'all'}
-          onPress={() => dispatch(setLeadsFilterUrgency('all'))}
-        />
-        <FilterChip
-          label={`🚨 Overdue (${overdueCount})`}
-          variant="error"
-          active={filterUrgency === 'overdue'}
-          onPress={() => dispatch(setLeadsFilterUrgency('overdue'))}
-        />
-        <FilterChip
-          label={`⏰ Due Today (${dueTodayCount})`}
-          variant="warning"
-          active={filterUrgency === 'today'}
-          onPress={() => dispatch(setLeadsFilterUrgency('today'))}
-        />
-        <FilterChip
-          label={`🏆 Won (${wonCount})`}
-          variant="success"
-          active={filterUrgency === 'won'}
-          onPress={() => dispatch(setLeadsFilterUrgency('won'))}
-        />
-      </ScrollView>
+      {/* Urgency Filter Chips (Horizontal Scrolling) */}
+      <View style={styles.chipsScrollWrapper}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+          <FilterChip
+            label="All"
+            active={urgencyFilter === 'all'}
+            onPress={() => dispatch(setUrgencyFilter('all'))}
+            badge={rawLeads.length}
+          />
+          <FilterChip
+            label="🚨 Overdue"
+            variant="error"
+            active={urgencyFilter === 'overdue'}
+            onPress={() => dispatch(setUrgencyFilter('overdue'))}
+          />
+          <FilterChip
+            label="⏰ Due Today"
+            variant="warning"
+            active={urgencyFilter === 'today'}
+            onPress={() => dispatch(setUrgencyFilter('today'))}
+          />
+          <FilterChip
+            label="🏆 Won"
+            variant="success"
+            active={urgencyFilter === 'won'}
+            onPress={() => dispatch(setUrgencyFilter('won'))}
+          />
+        </ScrollView>
+      </View>
 
-      {/* Scrollable Filter Chips - Stage */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[styles.chipsScroll, { marginTop: -2 }]}
-      >
-        <FilterChip
-          label={`All Stages (${allCount})`}
-          active={filterStage === 'all'}
-          onPress={() => dispatch(setLeadsFilterStage('all'))}
-        />
-        <FilterChip
-          label={`⚡ Untouched (${untouchedCount})`}
-          variant="warning"
-          active={filterStage === 'NEW'}
-          onPress={() => dispatch(setLeadsFilterStage('NEW'))}
-        />
-        <FilterChip
-          label={`Follow-up (${followupCount})`}
-          active={filterStage === 'FOLLOW_UP'}
-          onPress={() => dispatch(setLeadsFilterStage('FOLLOW_UP'))}
-        />
-        <FilterChip
-          label={`Proposal (${proposalCount})`}
-          active={filterStage === 'PROPOSAL'}
-          onPress={() => dispatch(setLeadsFilterStage('PROPOSAL'))}
-        />
-        <FilterChip
-          label={`Contacted (${contactedCount})`}
-          active={filterStage === 'CONTACTED'}
-          onPress={() => dispatch(setLeadsFilterStage('CONTACTED'))}
-        />
-        <FilterChip
-          label={`Won (${wonCount})`}
-          variant="success"
-          active={filterStage === 'WON'}
-          onPress={() => dispatch(setLeadsFilterStage('WON'))}
-        />
-      </ScrollView>
+      {/* Stage Filter Chips (Horizontal Scrolling) */}
+      <View style={styles.chipsScrollWrapper}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+          <FilterChip
+            label="All Stages"
+            active={stageFilter === 'all'}
+            onPress={() => dispatch(setStageFilter('all'))}
+          />
+          <FilterChip
+            label="⚡ Untouched"
+            active={stageFilter === 'NEW'}
+            onPress={() => dispatch(setStageFilter('NEW'))}
+          />
+          <FilterChip
+            label="Follow-up"
+            active={stageFilter === 'FOLLOW_UP'}
+            onPress={() => dispatch(setStageFilter('FOLLOW_UP'))}
+          />
+          <FilterChip
+            label="Proposal"
+            active={stageFilter === 'PROPOSAL'}
+            onPress={() => dispatch(setStageFilter('PROPOSAL'))}
+          />
+          <FilterChip
+            label="Contacted"
+            active={stageFilter === 'CONTACTED'}
+            onPress={() => dispatch(setStageFilter('CONTACTED'))}
+          />
+          <FilterChip
+            label="Won"
+            active={stageFilter === 'WON'}
+            onPress={() => dispatch(setStageFilter('WON'))}
+          />
+        </ScrollView>
+      </View>
 
-      {/* Result Meta Bar */}
+      {/* Counter & Reset action */}
       <View style={styles.metaRow}>
-        <Text style={styles.metaText}>
-          Showing <Text style={{ fontWeight: '700' }}>{filtered.length}</Text> of {allCount} leads
+        <Text style={styles.counterText}>
+          Showing <Text style={styles.counterBold}>{filteredLeads.length}</Text> of {rawLeads.length} leads
         </Text>
         {hasActiveFilters ? (
-          <TouchableOpacity onPress={() => dispatch(clearLeadsFilters())}>
-            <Text style={styles.resetFiltersText}>Reset Filters</Text>
+          <TouchableOpacity onPress={() => dispatch(resetFilters())}>
+            <Text style={styles.resetText}>Reset Filters</Text>
           </TouchableOpacity>
         ) : null}
       </View>
 
-      {/* Leads List Feed */}
-      <ScrollView
-        contentContainerStyle={styles.leadsFeed}
-        showsVerticalScrollIndicator={false}
-      >
-        {filtered.length === 0 ? (
-          <EmptyState
-            icon="🔍"
-            title="No matching leads"
-            message="Try adjusting your search terms or active filter chips."
-            actionLabel="Clear All Filters"
-            onAction={() => dispatch(clearLeadsFilters())}
+      {/* Leads List */}
+      <FlatList
+        data={filteredLeads}
+        keyExtractor={(item) => String(item.id)}
+        contentContainerStyle={styles.listContent}
+        onRefresh={refetch}
+        refreshing={isFetching}
+        renderItem={({ item }) => (
+          <LeadCardItem
+            lead={item}
+            onPress={() => handleOpenLead(item.id)}
           />
-        ) : (
-          filtered.map((lead) => (
-            <LeadCard
-              key={lead.id}
-              lead={lead}
-              onPress={() => navigation.navigate(ROUTES.LEAD_DETAIL, { leadId: lead.id })}
-            />
-          ))
         )}
-      </ScrollView>
-
-      {/* Quick Add Lead Modal */}
-      <QuickAddLeadModal onSaveLead={handleSaveNewLead} />
-    </View>
+        ListEmptyComponent={
+          isLoading ? (
+            <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+          ) : (
+            <EmptyState
+              title="No matching leads"
+              message="Try adjusting your search terms or active filter chips."
+              actionLabel="Clear All Filters"
+              onAction={() => dispatch(resetFilters())}
+            />
+          )
+        }
+      />
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.canvas,
   },
-  header: {
+  topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.pagePaddingHorizontal,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  headerTitle: {
-    ...typography.bodyBold,
-    fontSize: 14,
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  title: {
+    ...typography.subtitle,
     color: colors.textPrimary,
   },
-  headerSubtitle: {
+  subtitle: {
     ...typography.caption,
     color: colors.textSecondary,
-    fontSize: 11,
+    marginLeft: spacing.xs,
   },
   addLeadBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    minHeight: 28,
     borderRadius: radius.pill,
   },
-  addLeadBtnText: {
-    ...typography.captionBold,
-    color: colors.textOnPrimary,
-    fontSize: 11,
-  },
-  searchContainer: {
+  searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderColor: colors.border,
     borderWidth: 1,
+    borderColor: colors.borderStrong,
     borderRadius: radius.sm,
-    marginHorizontal: spacing.pagePaddingHorizontal,
-    marginVertical: spacing.xs,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
     paddingHorizontal: spacing.sm,
-    height: 38,
+    height: 40,
   },
   searchIcon: {
     fontSize: 14,
-    marginRight: 6,
+    marginRight: spacing.xs,
   },
   searchInput: {
     flex: 1,
+    height: '100%',
     ...typography.body,
-    fontSize: 12,
     color: colors.textPrimary,
-    padding: 0,
   },
-  clearSearchIcon: {
-    fontSize: 14,
+  clearBtn: {
+    padding: spacing.xs,
+  },
+  clearBtnText: {
+    fontSize: 12,
     color: colors.textSecondary,
-    padding: 4,
   },
-  chipsScroll: {
-    paddingHorizontal: spacing.pagePaddingHorizontal,
-    paddingVertical: 4,
+  chipsScrollWrapper: {
+    marginTop: spacing.xs,
+  },
+  chipsRow: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 2,
   },
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.pagePaddingHorizontal,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
   },
-  metaText: {
+  counterText: {
     ...typography.caption,
-    fontSize: 11,
     color: colors.textSecondary,
   },
-  resetFiltersText: {
+  counterBold: {
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  resetText: {
     ...typography.captionBold,
-    fontSize: 11,
     color: colors.primary,
   },
-  leadsFeed: {
-    paddingHorizontal: spacing.pagePaddingHorizontal,
-    paddingBottom: 40,
-    gap: 8,
+  listContent: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.xxxl,
+  },
+  loader: {
+    marginTop: spacing.xxl,
   },
 });
-
-export default MyLeadsScreen;

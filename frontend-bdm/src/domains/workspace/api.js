@@ -1,13 +1,13 @@
-import { baseApi } from '../../shared/store/api.js';
+import { baseApi } from '../../shared/store/baseApi.js';
 
 export const workspaceApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getWorkspaceDashboard: builder.query({
+    getBdmDashboard: builder.query({
       query: () => '/bdm/workspace/dashboard',
-      providesTags: ['Workspace'],
+      providesTags: ['Dashboard'],
     }),
   }),
+  overrideExisting: false,
 });
 
-export const { useGetWorkspaceDashboardQuery } = workspaceApi;
-export default workspaceApi;
+export const { useGetBdmDashboardQuery } = workspaceApi;

@@ -1,259 +1,282 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
-import { useSelector, useDispatch } from 'react-redux';
-import { colors, radius, spacing, typography } from '../../../shared/theme/index.js';
-import { FluentButton } from '../../../shared/components/index.js';
+import React, { useState } from 'react';
 import {
-  setWorkspaceTab,
-  setLeadsFilterStage,
-  setLeadsFilterUrgency,
-  setQuickAddModalOpen,
-  toggleAttendancePunch,
-} from '../../../shared/store/slices/uiSlice.js';
-import {
-  INITIAL_LEADS,
-  INITIAL_INTERACTIONS,
-} from '../../../shared/utils/mockSeedData.js';
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  RefreshControl,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useDispatch } from 'react-redux';
+import { colors } from '../../../shared/theme/colors.js';
+import { typography } from '../../../shared/theme/typography.js';
+import { spacing } from '../../../shared/theme/spacing.js';
+import { radius } from '../../../shared/theme/radius.js';
+import { FluentButton } from '../../../shared/components/FluentButton.jsx';
+import { PunchStatusCard } from '../components/PunchStatusCard.jsx';
+import { UntouchedAlertBanner } from '../components/UntouchedAlertBanner.jsx';
+import { PipelineMatrixGrid } from '../components/PipelineMatrixGrid.jsx';
+import { CallingTargetCard } from '../components/CallingTargetCard.jsx';
+import { CallLedgerFeed } from '../components/CallLedgerFeed.jsx';
+import { FunnelTab } from '../components/FunnelTab.jsx';
+import { PerformanceTab } from '../components/PerformanceTab.jsx';
+import { useGetBdmDashboardQuery } from '../api.js';
+import { setQuickAddModalOpen } from '../../../shared/store/uiSlice.js';
 import { ROUTES } from '../../../shared/navigation/routes.js';
 
-// Sub-components
-import PunchStatusCard from '../components/PunchStatusCard.jsx';
-import UntouchedAlertBanner from '../components/UntouchedAlertBanner.jsx';
-import PipelineMatrixGrid from '../components/PipelineMatrixGrid.jsx';
-import CallingTargetCard from '../components/CallingTargetCard.jsx';
-import CallLedgerFeed from '../components/CallLedgerFeed.jsx';
-import FunnelTab from '../components/FunnelTab.jsx';
-import PerformanceTab from '../components/PerformanceTab.jsx';
-
 export const WorkspaceScreen = ({ navigation }) => {
+  const [activeSubTab, setActiveSubTab] = useState('today'); // 'today' | 'funnel' | 'performance'
+  const { data: dashboardData, isLoading, refetch, isFetching } = useGetBdmDashboardQuery();
   const dispatch = useDispatch();
-  const currentTab = useSelector((state) => state.ui.workspaceTab || 'today');
-  const isPunchedIn = useSelector((state) => state.ui.isPunchedIn);
-  const lastPunchTime = useSelector((state) => state.ui.lastPunchTime);
 
-  const leads = INITIAL_LEADS;
-  const interactions = INITIAL_INTERACTIONS;
+  const kpis = dashboardData?.kpis || {};
+  const recentActivities = dashboardData?.recent_activities || [];
+  const overdueLeads = dashboardData?.overdue_leads || [];
+  const todayFollowups = dashboardData?.today_followups || [];
 
-  // Breakdown calculations
-  const newUntouchedLeads = leads.filter(
-    (l) => (l.status || '').toLowerCase() === 'new' || l.followup_count === 0
-  );
-  const contactedLeads = leads.filter((l) => (l.status || '').toLowerCase() === 'contacted');
-  const followupLeads = leads.filter((l) => (l.status || '').toLowerCase() === 'follow_up');
-  const proposalLeads = leads.filter(
-    (l) => (l.status || '').toLowerCase() === 'proposal' || (l.status || '').toLowerCase() === 'negotiation'
-  );
-  const wonLeads = leads.filter((l) => (l.status || '').toLowerCase() === 'won');
+  // Derived matrix data
+  const matrix = {
+    untouchedCount: Number(kpis.untouched_leads_count) || 0,
+    untouchedValue: Number(kpis.untouched_pipeline_value) || 0,
+    followupCount: todayFollowups.length || 0,
+    contactedCount: Number(kpis.contacted_leads_count) || 0,
+    contactedValue: Number(kpis.contacted_pipeline_value) || 0,
+    proposalCount: Number(kpis.proposal_leads_count) || 0,
+    proposalValue: Number(kpis.proposal_pipeline_value) || 0,
+    wonCount: Number(kpis.won_deals_count ?? kpis.won_leads_count) || 0,
+    wonValue: Number(kpis.won_revenue) || 0,
+    totalCount: Number(kpis.active_pipeline_count ?? kpis.assigned_leads_count) || 0,
+    totalValue: Number(kpis.active_pipeline_value ?? kpis.total_pipeline_value) || 0,
+  };
 
-  const untouchedValue = newUntouchedLeads.reduce((sum, l) => sum + (l.expected_value || l.budget || 0), 0);
-  const proposalValue = proposalLeads.reduce((sum, l) => sum + (l.expected_value || l.budget || 0), 0);
-  const wonValue = wonLeads.reduce((sum, l) => sum + (l.won_amount || l.expected_value || 0), 0);
-  const totalValue = leads.reduce((sum, l) => sum + (l.expected_value || l.budget || 0), 0);
-
-  // Navigation handlers
   const handleOpenLead = (leadId) => {
     navigation.navigate(ROUTES.LEAD_DETAIL, { leadId });
   };
 
-  const handleFilterStage = (stage) => {
-    dispatch(setLeadsFilterStage(stage));
-    navigation.navigate(ROUTES.MY_LEADS);
-  };
-
-  const handleFilterUrgency = (urgency) => {
-    dispatch(setLeadsFilterUrgency(urgency));
-    navigation.navigate(ROUTES.MY_LEADS);
+  const handleNavigateToLeads = (stageFilter = 'all') => {
+    navigation.navigate(ROUTES.MY_LEADS, { stageFilter });
   };
 
   return (
-    <View style={styles.container}>
-      {/* 3 Header Segmented Sub-Tabs */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tabItem, currentTab === 'today' && styles.activeTabItem]}
-          onPress={() => dispatch(setWorkspaceTab('today'))}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.tabText, currentTab === 'today' && styles.activeTabText]}>
-            Today's Activity
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tabItem, currentTab === 'funnel' && styles.activeTabItem]}
-          onPress={() => dispatch(setWorkspaceTab('funnel'))}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.tabText, currentTab === 'funnel' && styles.activeTabText]}>
-            Pipeline Funnel
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tabItem, currentTab === 'performance' && styles.activeTabItem]}
-          onPress={() => dispatch(setWorkspaceTab('performance'))}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.tabText, currentTab === 'performance' && styles.activeTabText]}>
-            My Performance
-          </Text>
-        </TouchableOpacity>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      {/* Top Header Bar */}
+      <View style={styles.topBar}>
+        <Text style={styles.topBarTitle}>My Workspace</Text>
+        <FluentButton
+          title="+ Add Lead"
+          onPress={() => {
+            console.log('>>> Add Lead button tapped! Dispatching setQuickAddModalOpen(true)');
+            dispatch(setQuickAddModalOpen(true));
+          }}
+          variant="primary"
+          size="small"
+          style={styles.addLeadPill}
+        />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {currentTab === 'today' ? (
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />
+        }
+      >
+        {/* Segmented Sub-Tabs */}
+        <View style={styles.tabBar}>
+          <TouchableOpacity
+            style={[styles.tabItem, activeSubTab === 'today' && styles.tabItemActive]}
+            onPress={() => setActiveSubTab('today')}
+            activeOpacity={0.8}
+          >
+            <Text
+              style={[styles.tabText, activeSubTab === 'today' && styles.tabTextActive]}
+            >
+              Today's Activity
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabItem, activeSubTab === 'funnel' && styles.tabItemActive]}
+            onPress={() => setActiveSubTab('funnel')}
+            activeOpacity={0.8}
+          >
+            <Text
+              style={[styles.tabText, activeSubTab === 'funnel' && styles.tabTextActive]}
+            >
+              Pipeline Funnel
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabItem, activeSubTab === 'performance' && styles.tabItemActive]}
+            onPress={() => setActiveSubTab('performance')}
+            activeOpacity={0.8}
+          >
+            <Text
+              style={[styles.tabText, activeSubTab === 'performance' && styles.tabTextActive]}
+            >
+              My Performance
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Syncing sales workspace...</Text>
+          </View>
+        ) : activeSubTab === 'today' ? (
           <>
-            {/* Punch Status Card */}
+            {/* 1. Punch Status Header Card */}
             <PunchStatusCard
-              isPunchedIn={isPunchedIn}
-              lastPunchTime={lastPunchTime}
-              onTogglePunch={() => dispatch(toggleAttendancePunch())}
+              isPunchedIn={Boolean(kpis.attendance_marked)}
+              punchInTime={kpis.punch_in_time}
+              onPunchOutPress={() => navigation.navigate(ROUTES.ATTENDANCE)}
+              onNavigateToPunch={() => navigation.navigate(ROUTES.ATTENDANCE)}
             />
 
-            {/* Quick Actions Bar */}
+            {/* 2. Quick Action Bar */}
             <View style={styles.quickActionsRow}>
               <FluentButton
-                variant="primary"
-                size="sm"
                 title="➕ Add Inbound Lead"
                 onPress={() => dispatch(setQuickAddModalOpen(true))}
-                style={styles.quickBtn}
-              />
-              <FluentButton
-                variant="secondary"
-                size="sm"
-                title={`📋 My Pipeline (${leads.length})`}
-                onPress={() => navigation.navigate(ROUTES.MY_LEADS)}
-                style={styles.quickBtn}
-              />
-            </View>
-
-            {/* High Urgency Alert Banner for Untouched Leads */}
-            <UntouchedAlertBanner
-              count={newUntouchedLeads.length}
-              onCallNow={() => handleFilterStage('NEW')}
-            />
-
-            {/* 2-Column Pipeline Matrix */}
-            <PipelineMatrixGrid
-              newCount={newUntouchedLeads.length}
-              newValue={untouchedValue}
-              followupCount={followupLeads.length}
-              contactedCount={contactedLeads.length}
-              proposalCount={proposalLeads.length}
-              proposalValue={proposalValue}
-              wonCount={wonLeads.length}
-              wonValue={wonValue}
-              totalCount={leads.length}
-              totalValue={totalValue}
-              onSelectStage={handleFilterStage}
-              onSelectUrgency={handleFilterUrgency}
-            />
-
-            {/* Calling Targets Scorecard */}
-            <CallingTargetCard
-              completedCount={interactions.length}
-              dailyTarget={15}
-              positiveCount={interactions.filter((i) => i.call_result_type === 'positive').length}
-              neutralCount={interactions.filter((i) => i.call_result_type === 'neutral').length}
-              meetingCount={interactions.filter((i) => i.type === 'meeting').length}
-            />
-
-            {/* Quick Action Navigation Bar */}
-            <View style={styles.actionRow}>
-              <FluentButton
                 variant="primary"
-                size="md"
-                title="+ Log Call / Interaction"
-                onPress={() => navigation.navigate(ROUTES.LOG_FOLLOWUP, { leadId: 'lead-101' })}
-                style={styles.logCallBtn}
+                size="medium"
+                style={styles.quickActionBtn}
               />
               <FluentButton
+                title={`📋 My Pipeline (${matrix.totalCount})`}
+                onPress={() => handleNavigateToLeads('all')}
                 variant="secondary"
-                size="md"
-                title="Filter My Leads ›"
-                onPress={() => navigation.navigate(ROUTES.MY_LEADS)}
-                style={styles.filterLeadsBtn}
+                size="medium"
+                style={styles.quickActionBtn}
               />
             </View>
 
-            {/* Today's Call Ledger Feed */}
+            {/* 3. High Urgency Alert: Untouched Leads */}
+            <UntouchedAlertBanner
+              count={matrix.untouchedCount}
+              onCallNowPress={() => handleNavigateToLeads('NEW')}
+            />
+
+            {/* 4. My Leads Pipeline Matrix (2-Column Grid) */}
+            <PipelineMatrixGrid
+              matrix={matrix}
+              onSelectStage={(stage) => handleNavigateToLeads(stage)}
+              onViewAll={() => handleNavigateToLeads('all')}
+            />
+
+            {/* 5. Daily Calling Target & Performance Scorecard */}
+            <CallingTargetCard
+              loggedCount={kpis.today_interactions?.total_today ?? recentActivities.length}
+              targetCount={15}
+              positiveCount={
+                kpis.today_interactions?.connected_calls ??
+                recentActivities.filter((i) => i.call_result_type === 'positive').length
+              }
+              neutralCount={recentActivities.filter((i) => i.call_result_type === 'neutral').length}
+              demoCount={
+                kpis.today_interactions?.meetings ??
+                recentActivities.filter((i) => i.type === 'meeting' || i.channel === 'meeting').length
+              }
+            />
+
+            {/* 6. Today's Call Ledger & Results Feed */}
             <CallLedgerFeed
-              interactions={interactions}
-              leads={leads}
+              interactions={recentActivities}
               onSelectLead={handleOpenLead}
             />
           </>
-        ) : currentTab === 'funnel' ? (
-          <FunnelTab onOpenLead={handleOpenLead} />
+        ) : activeSubTab === 'funnel' ? (
+          <FunnelTab
+            stageCounts={{
+              new: matrix.untouchedCount,
+              contacted: matrix.contactedCount,
+              follow_up: matrix.followupCount,
+              proposal: matrix.proposalCount,
+              wonRevenue: matrix.wonValue,
+            }}
+            overdueLeads={overdueLeads}
+            onOpenLead={handleOpenLead}
+          />
         ) : (
-          <PerformanceTab />
+          <PerformanceTab kpis={kpis} />
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.canvas,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  topBarTitle: {
+    ...typography.subtitle,
+    color: colors.textPrimary,
+  },
+  addLeadPill: {
+    minHeight: 28,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+  },
+  scrollContent: {
+    padding: spacing.md,
+    paddingBottom: spacing.xxxl,
   },
   tabBar: {
     flexDirection: 'row',
     backgroundColor: colors.surfaceAlt,
     borderRadius: radius.sm,
-    padding: 3,
-    marginHorizontal: spacing.pagePaddingHorizontal,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
+    padding: 2,
+    marginBottom: spacing.md,
   },
   tabItem: {
     flex: 1,
-    height: 32,
-    justifyContent: 'center',
+    paddingVertical: spacing.xs + 2,
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: radius.xs,
   },
-  activeTabItem: {
-    backgroundColor: colors.surface,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+  tabItemActive: {
+    backgroundColor: colors.primary,
   },
   tabText: {
     ...typography.captionBold,
     color: colors.textSecondary,
     fontSize: 11,
   },
-  activeTabText: {
-    color: colors.primary,
-    fontWeight: '700',
-  },
-  scrollContent: {
-    padding: spacing.pagePaddingHorizontal,
-    paddingBottom: 40,
-    gap: 8,
+  tabTextActive: {
+    color: colors.textOnPrimary,
   },
   quickActionsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  quickBtn: {
+  quickActionBtn: {
     flex: 1,
   },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginVertical: spacing.xs,
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxxl,
   },
-  logCallBtn: {
-    flex: 1,
-  },
-  filterLeadsBtn: {
-    paddingHorizontal: 12,
+  loadingText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
   },
 });
-
-export default WorkspaceScreen;

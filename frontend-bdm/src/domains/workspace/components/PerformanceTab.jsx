@@ -1,59 +1,72 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, radius, spacing, typography } from '../../../shared/theme/index.js';
-import { FluentCard } from '../../../shared/components/index.js';
+import { colors } from '../../../shared/theme/colors.js';
+import { typography } from '../../../shared/theme/typography.js';
+import { spacing } from '../../../shared/theme/spacing.js';
+import { radius } from '../../../shared/theme/radius.js';
+import { FluentCard } from '../../../shared/components/FluentCard.jsx';
+import { MetricTile } from '../../../shared/components/MetricTile.jsx';
+import { formatLakhs } from '../../../shared/utils/formatters.js';
 
-export const PerformanceTab = () => {
+export const PerformanceTab = ({
+  kpis = {},
+}) => {
+  const wonRevenue = Number(kpis.won_revenue) || 450000;
+  const weightedPipeline = Number(kpis.weighted_pipeline) || 416000;
+  const avgDealSize = Number(kpis.avg_deal_size) || 450000;
+  const conversionRate = Number(kpis.conversion_rate) || 25;
+
   return (
     <View style={styles.container}>
-      <FluentCard style={styles.card}>
-        <Text style={styles.title}>MY PERFORMANCE METRICS</Text>
-        <Text style={styles.subtitle}>Self-scoped metrics · Confidential to you</Text>
+      <FluentCard>
+        <Text style={styles.sectionTitle}>MY PERFORMANCE METRICS (SELF-SCOPED)</Text>
 
-        {/* 2x2 Metric Grid */}
-        <View style={styles.grid}>
-          <View style={styles.tile}>
-            <Text style={styles.tileLabel}>REVENUE WON</Text>
-            <Text style={[styles.tileValue, { color: colors.success }]}>₹4.50L</Text>
-          </View>
+        <View style={styles.metricsGrid}>
+          <MetricTile
+            label="REVENUE WON"
+            value={formatLakhs(wonRevenue, 2)}
+            valueColor={colors.success}
+            style={styles.tileMargin}
+          />
+          <MetricTile
+            label="WEIGHTED PIPE"
+            value={formatLakhs(weightedPipeline, 2)}
+            valueColor={colors.primary}
+            style={styles.tileMargin}
+          />
+        </View>
 
-          <View style={styles.tile}>
-            <Text style={styles.tileLabel}>WEIGHTED PIPE</Text>
-            <Text style={[styles.tileValue, { color: colors.primary }]}>₹4.16L</Text>
-          </View>
-
-          <View style={styles.tile}>
-            <Text style={styles.tileLabel}>AVG DEAL SIZE</Text>
-            <Text style={styles.tileValue}>₹4.50L</Text>
-          </View>
-
-          <View style={styles.tile}>
-            <Text style={styles.tileLabel}>CONVERSION RATE</Text>
-            <Text style={styles.tileValue}>25%</Text>
-          </View>
+        <View style={styles.metricsGrid}>
+          <MetricTile
+            label="AVG DEAL SIZE"
+            value={formatLakhs(avgDealSize, 2)}
+            style={styles.tileMargin}
+          />
+          <MetricTile
+            label="CONVERSION RATE"
+            value={`${conversionRate}%`}
+            style={styles.tileMargin}
+          />
         </View>
 
         {/* Weekly Deal Progress Bar Chart */}
-        <View style={styles.chartSection}>
-          <Text style={styles.chartTitle}>Weekly Deal Progress</Text>
-          <View style={styles.chartContainer}>
+        <View style={styles.chartContainer}>
+          <Text style={styles.chartTitle}>Weekly Deal Progress (This Month)</Text>
+          <View style={styles.barsArea}>
             <View style={styles.barCol}>
-              <View style={[styles.bar, { height: 35, backgroundColor: colors.primary }]} />
+              <View style={[styles.bar, { height: '35%', backgroundColor: colors.primary }]} />
               <Text style={styles.barLabel}>W1</Text>
             </View>
-
             <View style={styles.barCol}>
-              <View style={[styles.bar, { height: 55, backgroundColor: colors.primary }]} />
+              <View style={[styles.bar, { height: '55%', backgroundColor: colors.primary }]} />
               <Text style={styles.barLabel}>W2</Text>
             </View>
-
             <View style={styles.barCol}>
-              <View style={[styles.bar, { height: 95, backgroundColor: colors.success }]} />
+              <View style={[styles.bar, { height: '90%', backgroundColor: colors.success }]} />
               <Text style={styles.barLabel}>W3</Text>
             </View>
-
             <View style={styles.barCol}>
-              <View style={[styles.bar, { height: 65, backgroundColor: colors.primary }]} />
+              <View style={[styles.bar, { height: '65%', backgroundColor: colors.primary }]} />
               <Text style={styles.barLabel}>W4</Text>
             </View>
           </View>
@@ -65,48 +78,22 @@ export const PerformanceTab = () => {
 
 const styles = StyleSheet.create({
   container: {
-    gap: 12,
+    paddingVertical: spacing.xs,
   },
-  card: {
-    padding: 14,
-  },
-  title: {
+  sectionTitle: {
     ...typography.overline,
     color: colors.textSecondary,
-    fontSize: 11,
-    fontWeight: '700',
+    marginBottom: spacing.md,
   },
-  subtitle: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    fontSize: 10,
+  metricsGrid: {
+    flexDirection: 'row',
     marginBottom: spacing.sm,
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: spacing.xs,
+  tileMargin: {
+    marginHorizontal: spacing.xs,
   },
-  tile: {
-    width: '48.5%',
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.sm,
-    padding: 10,
-  },
-  tileLabel: {
-    ...typography.overline,
-    color: colors.textSecondary,
-    fontSize: 9,
-  },
-  tileValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginTop: 2,
-  },
-  chartSection: {
-    marginTop: spacing.lg,
+  chartContainer: {
+    marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border,
@@ -114,31 +101,30 @@ const styles = StyleSheet.create({
   chartTitle: {
     ...typography.captionBold,
     color: colors.textPrimary,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
-  chartContainer: {
+  barsArea: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    justifyContent: 'space-around',
-    height: 110,
-    paddingBottom: 4,
+    height: 120,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    paddingBottom: spacing.xs,
   },
   barCol: {
+    flex: 1,
     alignItems: 'center',
-    width: 40,
+    height: '100%',
+    justifyContent: 'flex-end',
   },
   bar: {
     width: 28,
     borderRadius: radius.xs,
   },
   barLabel: {
-    ...typography.overline,
+    ...typography.captionBold,
     color: colors.textSecondary,
+    marginTop: spacing.xs,
     fontSize: 10,
-    marginTop: 4,
   },
 });
-
-export default PerformanceTab;

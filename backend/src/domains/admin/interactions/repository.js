@@ -39,7 +39,8 @@ export const adminInteractionsRepository = {
     }
     if (end_date) {
       conditions.push(`i.created_at <= $${idx++}`);
-      values.push(end_date);
+      const adjustedEndDate = end_date.length === 10 ? `${end_date} 23:59:59` : end_date;
+      values.push(adjustedEndDate);
     }
     if (search) {
       conditions.push(`(
@@ -111,7 +112,8 @@ export const adminInteractionsRepository = {
     }
     if (end_date) {
       conditions.push(`i.created_at <= $${idx++}`);
-      values.push(end_date);
+      const adjustedEndDate = end_date.length === 10 ? `${end_date} 23:59:59` : end_date;
+      values.push(adjustedEndDate);
     }
     if (search) {
       conditions.push(`(

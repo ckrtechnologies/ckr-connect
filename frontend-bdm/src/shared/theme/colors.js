@@ -1,64 +1,70 @@
 /**
- * Microsoft Fluent 2 Color Tokens — CKR Connect BDM Mobile
- * Source of truth: docs/DESIGN.md §1.1 & prototype/tokens.css
+ * Microsoft Fluent 2 Design Tokens for CKR Connect BDM Mobile
+ * Colors adapted from approved prototype and DESIGN.md
  */
+
 export const colors = {
-  // Brand Palette
+  // Brand Cortana Blue
   primary: '#0067B8',
   primaryHover: '#005A9E',
   primaryPressed: '#004578',
   primaryLight: '#EFF6FC',
+  primaryDark: '#003359',
 
-  // Neutrals & Surfaces
-  background: '#FAF9F8',
-  surface: '#FFFFFF',
-  surfaceAlt: '#F3F2F1',
+  // Canvas & Surfaces
+  canvas: '#FAF9F8',       // Fluent layered background (not stark white)
+  surface: '#FFFFFF',      // Cards, inputs, bottom sheets
+  surfaceAlt: '#F3F2F1',   // Sub-tabs, secondary containers, chip backgrounds
   surfaceHover: '#EDEBE9',
-  border: '#E1DFDD',
-  borderLight: '#EDEBE9',
-  borderStrong: '#8A8886',
-  divider: '#EDEBE9',
+  surfaceSelected: '#EFF6FC',
 
-  // Text Colors
+  // Borders & Dividers
+  border: '#EDEBE9',
+  borderStrong: '#E1DFDD',
+  borderFocus: '#0067B8',
+  borderSubtle: '#F3F2F1',
+
+  // Typography
   textPrimary: '#201F1E',
   textSecondary: '#605E5C',
   textDisabled: '#A19F9D',
   textOnPrimary: '#FFFFFF',
 
-  // Semantic Status Colors
+  // Status Indicators
   success: '#107C10',
   successBg: '#DFF6DD',
-  successText: '#0E610E',
+  successText: '#107C10',
 
-  warning: '#797673',
+  warning: '#D97706',
   warningBg: '#FFF4CE',
   warningText: '#78350F',
-
-  // High-Urgency Untouched Amber Tokens (from approved prototype)
-  urgentAmber: '#D97706',
-  urgentAmberDark: '#B45309',
-  urgentAmberBg: '#FFFBEB',
-  urgentAmberText: '#78350F',
-  urgentAmberBorder: '#F2C94C',
+  warningBorder: '#F2C94C',
 
   error: '#A4262C',
   errorBg: '#FDE7E9',
-  errorText: '#8A1F24',
+  errorText: '#A4262C',
+  errorBorder: '#F7B5B9',
 
   info: '#0078D4',
   infoBg: '#EFF6FC',
-  infoText: '#005A9E',
+  infoText: '#004E8C',
 
-  // Third-party channels
-  whatsapp: '#107C41',
-  whatsappHover: '#0B5A2F',
+  // High Urgency Untouched Palette
+  untouchedBg: '#FFF4CE',
+  untouchedText: '#78350F',
+  untouchedBorder: '#F2C94C',
+  untouchedBtn: '#D97706',
 
-  // Stage specific colors
-  proposal: '#8E44AD',
-  proposalBg: '#F3EEFC',
+  // Priority Badges
+  priorityHighBg: '#FDE7E9',
+  priorityHighText: '#A80000',
+  priorityHighBorder: '#F7B5B9',
 
-  overlay: 'rgba(0, 0, 0, 0.45)',
-  transparent: 'transparent',
+  priorityMediumBg: '#EFF6FC',
+  priorityMediumText: '#005A9E',
+  priorityMediumBorder: '#C7E0F4',
+
+  priorityLowBg: '#F3F2F1',
+  priorityLowText: '#605E5C',
+  priorityLowBorder: '#E1DFDD',
 };
-
-export default colors;

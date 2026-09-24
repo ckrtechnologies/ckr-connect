@@ -1,148 +1,125 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors, radius, spacing, typography, shadows } from '../../../shared/theme/index.js';
-import { formatCurrency } from '../../../shared/utils/formatters.js';
+import { colors } from '../../../shared/theme/colors.js';
+import { typography } from '../../../shared/theme/typography.js';
+import { spacing } from '../../../shared/theme/spacing.js';
+import { radius } from '../../../shared/theme/radius.js';
+import { shadows } from '../../../shared/theme/shadows.js';
+import { formatLakhs } from '../../../shared/utils/formatters.js';
 
 export const PipelineMatrixGrid = ({
-  newCount,
-  newValue,
-  followupCount,
-  contactedCount,
-  proposalCount,
-  proposalValue,
-  wonCount,
-  wonValue,
-  totalCount,
-  totalValue,
+  matrix = {},
   onSelectStage,
-  onSelectUrgency,
+  onViewAll,
 }) => {
+  const {
+    untouchedCount = 0,
+    untouchedValue = 0,
+    followupCount = 0,
+    contactedCount = 0,
+    contactedValue = 0,
+    proposalCount = 0,
+    proposalValue = 0,
+    wonCount = 0,
+    wonValue = 0,
+    totalCount = 0,
+    totalValue = 0,
+  } = matrix;
+
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.sectionTitle}>MY LEADS PIPELINE MATRIX</Text>
-        <TouchableOpacity onPress={() => onSelectStage('all')}>
+        <TouchableOpacity onPress={onViewAll}>
           <Text style={styles.viewAllText}>View All ({totalCount}) ›</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.grid}>
-        {/* 1. Untouched / New Leads Card */}
+        {/* Untouched Card */}
         <TouchableOpacity
           style={[styles.card, styles.untouchedCard]}
           onPress={() => onSelectStage('NEW')}
-          activeOpacity={0.75}
+          activeOpacity={0.8}
         >
           <View style={styles.cardTop}>
-            <Text style={[styles.cardLabel, { color: colors.urgentAmberDark }]}>
-              ⚡ NEW / UNTOUCHED
-            </Text>
-            <Text style={[styles.cardCount, { color: colors.urgentAmberDark }]}>
-              {newCount}
-            </Text>
+            <Text style={[styles.cardTag, { color: '#92400E' }]}>⚡ UNTOUCHED</Text>
+            <Text style={[styles.cardCount, { color: '#B45309' }]}>{untouchedCount}</Text>
           </View>
-          <View style={styles.cardBottom}>
-            <Text style={[styles.cardValue, { color: colors.urgentAmberText }]}>
-              {formatCurrency(newValue, true)} Pipeline
-            </Text>
-            <Text style={styles.cardSubtext}>0 calls made · High Priority</Text>
-          </View>
+          <Text style={styles.cardValue}>{formatLakhs(untouchedValue)} Pipe</Text>
+          <Text style={styles.cardHint}>0 calls made · High Priority</Text>
         </TouchableOpacity>
 
-        {/* 2. Follow-ups Due Card */}
+        {/* Follow-ups Due Card */}
         <TouchableOpacity
           style={[styles.card, { borderLeftColor: colors.warning, borderLeftWidth: 4 }]}
-          onPress={() => onSelectUrgency('today')}
-          activeOpacity={0.75}
+          onPress={() => onSelectStage('FOLLOW_UP')}
+          activeOpacity={0.8}
         >
           <View style={styles.cardTop}>
-            <Text style={styles.cardLabel}>⏰ FOLLOW-UPS DUE</Text>
-            <Text style={[styles.cardCount, { color: colors.urgentAmber }]}>
-              {followupCount}
-            </Text>
+            <Text style={styles.cardTag}>⏰ FOLLOW-UPS</Text>
+            <Text style={[styles.cardCount, { color: colors.warning }]}>{followupCount}</Text>
           </View>
-          <View style={styles.cardBottom}>
-            <Text style={styles.cardValue}>1 Overdue · 1 Today</Text>
-            <Text style={styles.cardSubtext}>Scheduled callbacks</Text>
-          </View>
+          <Text style={styles.cardValue}>Scheduled</Text>
+          <Text style={styles.cardHint}>Callbacks due</Text>
         </TouchableOpacity>
 
-        {/* 3. In Contacted / Active Card */}
+        {/* Contacted Card */}
         <TouchableOpacity
           style={[styles.card, { borderLeftColor: colors.info, borderLeftWidth: 4 }]}
           onPress={() => onSelectStage('CONTACTED')}
-          activeOpacity={0.75}
+          activeOpacity={0.8}
         >
           <View style={styles.cardTop}>
-            <Text style={styles.cardLabel}>📞 CONTACTED</Text>
-            <Text style={[styles.cardCount, { color: colors.info }]}>
-              {contactedCount}
-            </Text>
+            <Text style={styles.cardTag}>📞 CONTACTED</Text>
+            <Text style={[styles.cardCount, { color: colors.info }]}>{contactedCount}</Text>
           </View>
-          <View style={styles.cardBottom}>
-            <Text style={styles.cardValue}>₹2.6L Pipeline</Text>
-            <Text style={styles.cardSubtext}>First contact done</Text>
-          </View>
+          <Text style={styles.cardValue}>{formatLakhs(contactedValue)} Pipe</Text>
+          <Text style={styles.cardHint}>First contact logged</Text>
         </TouchableOpacity>
 
-        {/* 4. In Proposal Card */}
+        {/* Proposal Card */}
         <TouchableOpacity
-          style={[styles.card, { borderLeftColor: colors.proposal, borderLeftWidth: 4 }]}
+          style={[styles.card, { borderLeftColor: '#8E44AD', borderLeftWidth: 4 }]}
           onPress={() => onSelectStage('PROPOSAL')}
-          activeOpacity={0.75}
+          activeOpacity={0.8}
         >
           <View style={styles.cardTop}>
-            <Text style={styles.cardLabel}>📄 PROPOSAL</Text>
-            <Text style={[styles.cardCount, { color: colors.proposal }]}>
-              {proposalCount}
-            </Text>
+            <Text style={styles.cardTag}>📄 PROPOSAL</Text>
+            <Text style={[styles.cardCount, { color: '#8E44AD' }]}>{proposalCount}</Text>
           </View>
-          <View style={styles.cardBottom}>
-            <Text style={styles.cardValue}>
-              {formatCurrency(proposalValue, true)} Expected
-            </Text>
-            <Text style={styles.cardSubtext}>Awaiting client closure</Text>
-          </View>
+          <Text style={styles.cardValue}>{formatLakhs(proposalValue)} Pipe</Text>
+          <Text style={styles.cardHint}>Awaiting closure</Text>
         </TouchableOpacity>
 
-        {/* 5. Deals Won Card */}
+        {/* Won Card */}
         <TouchableOpacity
           style={[styles.card, styles.wonCard]}
           onPress={() => onSelectStage('WON')}
-          activeOpacity={0.75}
+          activeOpacity={0.8}
         >
           <View style={styles.cardTop}>
-            <Text style={[styles.cardLabel, { color: '#1E4620' }]}>🏆 DEALS WON</Text>
-            <Text style={[styles.cardCount, { color: colors.success }]}>
-              {wonCount}
-            </Text>
+            <Text style={[styles.cardTag, { color: '#1E4620' }]}>🏆 DEALS WON</Text>
+            <Text style={[styles.cardCount, { color: colors.success }]}>{wonCount}</Text>
           </View>
-          <View style={styles.cardBottom}>
-            <Text style={[styles.cardValue, { color: colors.success }]}>
-              {formatCurrency(wonValue, true)} Won
-            </Text>
-            <Text style={styles.cardSubtext}>Closed this month</Text>
-          </View>
+          <Text style={[styles.cardValue, { color: colors.success }]}>
+            {formatLakhs(wonValue, 2)} Won
+          </Text>
+          <Text style={[styles.cardHint, { color: '#1E4620' }]}>Closed revenue</Text>
         </TouchableOpacity>
 
-        {/* 6. Total Assigned Card */}
+        {/* Total Assigned Card */}
         <TouchableOpacity
           style={styles.card}
-          onPress={() => onSelectStage('all')}
-          activeOpacity={0.75}
+          onPress={onViewAll}
+          activeOpacity={0.8}
         >
           <View style={styles.cardTop}>
-            <Text style={styles.cardLabel}>📋 TOTAL ASSIGNED</Text>
-            <Text style={[styles.cardCount, { color: colors.textPrimary }]}>
-              {totalCount}
-            </Text>
+            <Text style={styles.cardTag}>📋 TOTAL ASSIGNED</Text>
+            <Text style={styles.cardCount}>{totalCount}</Text>
           </View>
-          <View style={styles.cardBottom}>
-            <Text style={styles.cardValue}>
-              {formatCurrency(totalValue, true)} Total
-            </Text>
-            <Text style={styles.cardSubtext}>Tap to filter & search ›</Text>
-          </View>
+          <Text style={styles.cardValue}>{formatLakhs(totalValue)} Total</Text>
+          <Text style={styles.cardHint}>Tap to filter ›</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -151,83 +128,72 @@ export const PipelineMatrixGrid = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: spacing.xs,
+    marginBottom: spacing.md,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.xs,
-    paddingHorizontal: 2,
   },
   sectionTitle: {
     ...typography.overline,
-    fontSize: 11,
     color: colors.textSecondary,
-    fontWeight: '700',
-    letterSpacing: 0.5,
   },
   viewAllText: {
     ...typography.captionBold,
-    fontSize: 11,
     color: colors.primary,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    justifyContent: 'space-between',
   },
   card: {
     width: '48.5%',
     backgroundColor: colors.surface,
-    borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: radius.md,
-    padding: 10,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
     ...shadows.level1,
   },
   untouchedCard: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#FDE68A',
-    borderLeftColor: colors.urgentAmber,
+    backgroundColor: '#FFFDF5',
     borderLeftWidth: 4,
+    borderLeftColor: '#F7B500',
   },
   wonCard: {
-    backgroundColor: '#E8F5E9',
-    borderColor: '#C8E6C9',
-    borderLeftColor: colors.success,
+    backgroundColor: '#F3FCF3',
     borderLeftWidth: 4,
+    borderLeftColor: colors.success,
   },
   cardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
-  cardLabel: {
+  cardTag: {
     ...typography.overline,
-    fontSize: 10,
+    fontSize: 9,
     color: colors.textSecondary,
-    fontWeight: '700',
-    flex: 1,
   },
   cardCount: {
-    fontSize: 16,
+    ...typography.subtitle,
     fontWeight: '800',
-  },
-  cardBottom: {
-    marginTop: 4,
-  },
-  cardValue: {
-    ...typography.captionBold,
-    fontSize: 11,
     color: colors.textPrimary,
   },
-  cardSubtext: {
+  cardValue: {
+    ...typography.bodyBold,
+    color: colors.textPrimary,
+    marginTop: spacing.xs,
+    fontSize: 13,
+  },
+  cardHint: {
     ...typography.caption,
-    fontSize: 10,
     color: colors.textSecondary,
-    marginTop: 1,
+    fontSize: 10,
+    marginTop: 2,
   },
 });
-
-export default PipelineMatrixGrid;

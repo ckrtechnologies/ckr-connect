@@ -34,12 +34,13 @@
 
 | Method | Path | Role | Purpose | Screen |
 |---|---|---|---|---|
-| GET | `/leads` | admin | list/filter/search leads (query: status, tag_id, assigned_to, source, state, city, date_from, date_to, search, page, limit) | A-03 |
+| GET | `/leads` | admin | list/filter/search leads (query: status, tags, assigned_to, source, state, city, date_from, date_to, search, page, limit) | A-03 |
 | GET | `/leads/mine` | bdm | list own assigned leads only — server-scoped to `req.user.id`, same filters as above minus `assigned_to` | B-05 |
 | GET | `/leads/:id?include=interactions,status_history,assignment_history,account` | admin, bdm (own only) | **consolidated** lead detail call — returns the lead, BPF/stepper state, and every related panel Lead Detail needs (interaction timeline, status history, assignment history, linked account summary) in one response. Replaces what would otherwise be 3-4 separate round-trips per page load. Omit an `include` value to skip that section if a future lighter view needs it. | A-04, B-06 |
 | POST | `/leads` | admin | create a single lead | A-05 |
 | POST | `/leads/bulk-upload` | admin | upload CSV, returns validation preview (no commit) | A-06 |
 | POST | `/leads/bulk-upload/commit` | admin | commit a previously validated upload batch | A-06 |
+| POST | `/leads/bulk-delete` | admin | permanently delete multiple leads and their related history | A-03 |
 | PATCH | `/leads/:id` | admin, bdm (own only) | update lead fields | A-04, B-06 |
 | PATCH | `/leads/:id/status` | admin, bdm (own only) | change status; `lost_reason` required if → lost, `invalid_reason` required if → invalid; writes `lead_status_history` | A-04, B-06 (US-09, US-25) |
 | POST | `/leads/:id/assign` | admin | assign/reassign to a BDM; writes `lead_assignment_history`, fires notification | A-07 |
@@ -63,13 +64,14 @@
 
 ---
 
-## Domain: `lead-interactions`
+## Domain: `interactions`
 
 | Method | Path | Role | Purpose | Screen |
 |---|---|---|---|---|
-| GET | `/leads/:id/interactions` | admin, bdm (own only) | interaction history timeline for one lead — used for a **targeted RTK Query cache refresh** after `POST /leads/:id/interactions` (invalidates only this list, not the whole Lead Detail payload); the initial Lead Detail page load gets this data from the consolidated `GET /leads/:id?include=...` call above, not this endpoint | A-04, B-06 |
-| POST | `/leads/:id/interactions` | admin, bdm (own only) | log a follow-up; server updates `last_followup_date`, `followup_count`, `next_followup_date` on the lead | B-07 |
-| GET | `/interactions/daily-report` | admin | cross-BDM interaction rollup (query: date or date_from/date_to, bdm_id) + 0-activity flags | A-16 |
+| GET | `/interactions` | admin, bdm (own only) | list and filter interaction history across leads or for a specific lead | A-16, A-04, B-06 |
+| POST | `/interactions` | admin, bdm (own only) | log a follow-up; server updates `last_followup_date`, `followup_count`, `next_followup_date` on the lead | B-07 |
+| GET | `/interactions/daily-summary` | admin | cross-BDM interaction rollup (query: date or date_from/date_to, bdm_id) + 0-activity flags | A-16 |
+| GET | `/interactions/export-csv` | admin | CSV export of interactions ledger | A-16 |
 
 ---
 

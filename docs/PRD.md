@@ -3,7 +3,7 @@
 **Version:** v1.0
 **Date:** 22 Sep 2026
 **Owner:** Chandan Mallik, Co-Founder & CTO, CKR Technologies
-**Status:** Draft — internal project (no client sign-off; Locked Decisions below act as the freeze point)
+**Status:** Active Development — Phase 1 (Admin Panel) Complete, Phase 2 (BDM Mobile App) Ready to Start
 
 ---
 
@@ -36,7 +36,7 @@ This is an **internal tool**, not a client deliverable — so the prototype-firs
 - **Notifications: in-app/web only** (no WhatsApp, no email) — bell icon + unread count, delivered via `socket.io`.
 - **Hosting: Tier 1** — shared Postgres on CKR VPS, own schema (`crm`) + own DB role, Express-owned auth (JWT, bcrypt), no Supabase Auth/PostgREST/RLS.
 - **Roles:** `admin`, `bdm` only for v1. No manager/team-lead tier yet.
-- **Lead tagging:** Product (School Management ERP, Other ERP/Software) and Service (Custom App/Website Development) via an admin-editable `tags` master, not hardcoded.
+- **Lead tagging:** Product (School Management ERP, Other ERP/Software) and Service (Custom App/Website Development) via an admin-editable `tags` master. Leads can have multiple tags via a `lead_tags` junction table.
 - **State field** added to leads (alongside city) — relevant mainly for School ERP leads sold across Indian states.
 - **Attendance:** self-punch by BDM (check-in/check-out); Admin can view/edit; holidays handled via a separate `holidays` table — a BDM not punching on a holiday is not counted absent.
 - **Visual direction: Fluent 2 / Dynamics 365 look** — command bar, collapsible site map, dense entity grids, Business Process Flow bar on Lead Detail (replaces the earlier generic "stepper" concept with the authentic Dynamics component), Fluent UI React v9 component library. Full spec in DESIGN.md. **Open item:** whether the Quick Create overlay is right-anchored (authentic Dynamics) or left-anchored (originally specified) — flagged in DESIGN.md §2.7, not yet resolved.
@@ -96,6 +96,10 @@ This is an **internal tool**, not a client deliverable — so the prototype-firs
 **US-06:** As Admin, I can filter/search leads by status, tag, BDM, source, state, city, date range so I can find relevant leads quickly.
 - AC-1: All filters combinable (AND logic); search by name/phone/company as free text.
 - AC-2: Filtered view is exportable (CSV).
+
+**US-06b:** As Admin, I can bulk delete leads.
+- AC-1: Single and multi-select (bulk) deletion supported from the lead list.
+- AC-2: Deletion cascades or handles interaction history, status history and assignment history so no orphans remain.
 
 **US-07:** As Admin, I can manage the Product/Service tag master so new offerings (e.g. future ERPs) can be added without a code change.
 - AC-1: Admin can add/deactivate a tag; deactivated tags stay on existing leads but aren't selectable for new leads.

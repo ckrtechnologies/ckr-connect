@@ -1,32 +1,41 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
-import { colors, spacing, typography } from '../../../shared/theme/index.js';
-import { FluentButton } from '../../../shared/components/index.js';
-import { setOnboardingCompleted } from '../../../shared/store/slices/authSlice.js';
-import { ROUTES } from '../../../shared/navigation/routes.js';
+import { colors } from '../../../shared/theme/colors.js';
+import { typography } from '../../../shared/theme/typography.js';
+import { spacing } from '../../../shared/theme/spacing.js';
+import { radius } from '../../../shared/theme/radius.js';
+import { FluentButton } from '../../../shared/components/FluentButton.jsx';
+import { setOnboarded } from '../slice.js';
+import { storage } from '../../../shared/utils/storage.js';
 
 const SLIDES = [
   {
+    icon: '📋',
     title: '1. My Assigned Leads',
     desc: 'All leads allocated to you appear here in real-time. Follow up on schedule and never miss an overdue notification.',
-    icon: '📋',
   },
   {
-    title: '2. Daily Attendance Punch',
-    desc: 'Punch in every morning before calling. Check out at end of shift with a single tap.',
     icon: '⏰',
+    title: '2. Daily Attendance Punch',
+    desc: 'Punch in every morning before calling. Check out at the end of your shift with a single thumb tap.',
   },
   {
-    title: '3. Real-Time Broadcasts',
-    desc: 'Instant live alerts when new leads are assigned or follow-up milestones are due.',
     icon: '🔔',
+    title: '3. Real-Time Broadcasts',
+    desc: 'Instant live alerts when new leads are allocated to your queue or follow-up milestones are due.',
   },
 ];
 
-export const WelcomeWalkthroughScreen = ({ navigation }) => {
-  const dispatch = useDispatch();
+export const WelcomeWalkthroughScreen = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const dispatch = useDispatch();
+
+  const handleFinish = async () => {
+    await storage.setOnboarded(true);
+    dispatch(setOnboarded(true));
+  };
 
   const handleNext = () => {
     if (currentSlide < SLIDES.length - 1) {
@@ -36,79 +45,87 @@ export const WelcomeWalkthroughScreen = ({ navigation }) => {
     }
   };
 
-  const handleFinish = () => {
-    dispatch(setOnboardingCompleted());
-    navigation.replace(ROUTES.MAIN_TABS);
-  };
-
   const slide = SLIDES[currentSlide];
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.topIndicator}>
-        NEW HIRE ONBOARDING · SLIDE {currentSlide + 1} OF {SLIDES.length}
-      </Text>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.topIndicator}>
+        <Text style={styles.topIndicatorText}>
+          NEW HIRE ONBOARDING · SLIDE {currentSlide + 1} OF 3
+        </Text>
+      </View>
 
-      <View style={styles.centerContent}>
-        <Text style={styles.icon}>{slide.icon}</Text>
+      <View style={styles.slideContent}>
+        <View style={styles.iconCircle}>
+          <Text style={styles.icon}>{slide.icon}</Text>
+        </View>
         <Text style={styles.title}>{slide.title}</Text>
-        <Text style={styles.description}>{slide.desc}</Text>
+        <Text style={styles.desc}>{slide.desc}</Text>
 
-        {/* Dots indicator */}
+        {/* Progress dots */}
         <View style={styles.dotsRow}>
-          {SLIDES.map((_, index) => (
+          {SLIDES.map((_, idx) => (
             <View
-              key={index}
-              style={[
-                styles.dot,
-                index === currentSlide ? styles.activeDot : null,
-              ]}
+              key={idx}
+              style={[styles.dot, idx === currentSlide && styles.dotActive]}
             />
           ))}
         </View>
       </View>
 
-      <View style={styles.footerRow}>
+      <View style={styles.footerActions}>
         <FluentButton
-          variant="secondary"
           title="Skip Walkthrough"
           onPress={handleFinish}
-          style={styles.halfBtn}
+          variant="secondary"
+          size="large"
+          style={styles.actionBtn}
         />
         <FluentButton
-          variant="primary"
           title={currentSlide === SLIDES.length - 1 ? 'Finish & Launch' : 'Next ›'}
           onPress={handleNext}
-          style={styles.halfBtn}
+          variant="primary"
+          size="large"
+          style={styles.actionBtn}
         />
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.canvas,
     justifyContent: 'space-between',
-    padding: spacing.xl,
-    paddingTop: 48,
-    paddingBottom: 36,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
   },
   topIndicator: {
-    ...typography.captionBold,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    fontSize: 11,
-    letterSpacing: 0.5,
+    alignItems: 'center',
+    paddingTop: spacing.sm,
   },
-  centerContent: {
+  topIndicatorText: {
+    ...typography.overline,
+    color: colors.textSecondary,
+  },
+  slideContent: {
     alignItems: 'center',
     paddingHorizontal: spacing.md,
   },
-  icon: {
-    fontSize: 64,
+  iconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.xl,
+    borderWidth: 2,
+    borderColor: '#C7E0F4',
+  },
+  icon: {
+    fontSize: 50,
   },
   title: {
     ...typography.title,
@@ -116,7 +133,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
-  description: {
+  desc: {
     ...typography.body,
     color: colors.textSecondary,
     textAlign: 'center',
@@ -125,27 +142,24 @@ const styles = StyleSheet.create({
   },
   dotsRow: {
     flexDirection: 'row',
-    gap: 8,
     marginTop: spacing.xl,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.border,
+    backgroundColor: colors.borderStrong,
+    marginHorizontal: 4,
   },
-  activeDot: {
+  dotActive: {
     width: 24,
     backgroundColor: colors.primary,
   },
-  footerRow: {
+  footerActions: {
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  halfBtn: {
+  actionBtn: {
     flex: 1,
-    height: 44,
   },
 });
-
-export default WelcomeWalkthroughScreen;

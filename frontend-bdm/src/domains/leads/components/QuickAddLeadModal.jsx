@@ -1,230 +1,211 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { colors, radius, spacing, typography } from '../../../shared/theme/index.js';
-import { BottomSheet, FluentButton, FluentInput } from '../../../shared/components/index.js';
-import { setQuickAddModalOpen } from '../../../shared/store/slices/uiSlice.js';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Alert,
+} from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
+import { colors } from '../../../shared/theme/colors.js';
+import { typography } from '../../../shared/theme/typography.js';
+import { spacing } from '../../../shared/theme/spacing.js';
+import { BottomSheet } from '../../../shared/components/BottomSheet.jsx';
+import { FluentInput } from '../../../shared/components/FluentInput.jsx';
+import { FluentButton } from '../../../shared/components/FluentButton.jsx';
+import { setQuickAddModalOpen } from '../../../shared/store/uiSlice.js';
+import { useCreateBdmLeadMutation } from '../api.js';
 
-export const QuickAddLeadModal = ({ onSaveLead }) => {
-  const dispatch = useDispatch();
+export const QuickAddLeadModal = () => {
   const visible = useSelector((state) => state.ui.quickAddModalOpen);
+  console.log('QuickAddLeadModal render, visible =', visible);
+  const dispatch = useDispatch();
+  const [createLead, { isLoading }] = useCreateBdmLeadMutation();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
   const [company, setCompany] = useState('');
-  const [expectedValue, setExpectedValue] = useState('250000');
+  const [expectedValue, setExpectedValue] = useState('');
   const [city, setCity] = useState('');
-  const [state, setState] = useState('Telangana');
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [state, setState] = useState('Delhi');
 
   const handleClose = () => {
     dispatch(setQuickAddModalOpen(false));
-    resetForm();
   };
 
-  const resetForm = () => {
-    setName('');
-    setPhone('');
-    setNotes('');
-    setCompany('');
-    setExpectedValue('250000');
-    setCity('');
-    setEmail('');
-  };
-
-  const handleSave = async (openDetail = false) => {
-    if (!name.trim() || !phone.trim() || !notes.trim()) {
-      Alert.alert(
-        'Required Information',
-        'Please fill in Contact Person Name, Phone Number, and Discussion Notes.'
-      );
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert('Required Field', 'Please enter the contact person name.');
+      return;
+    }
+    if (!phone.trim()) {
+      Alert.alert('Required Field', 'Please enter the phone number.');
+      return;
+    }
+    if (!notes.trim()) {
+      Alert.alert('Required Field', 'Please enter initial discussion/requirement notes.');
       return;
     }
 
     try {
-      setLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const newLead = {
-        id: `lead-${Date.now().toString().slice(-4)}`,
+      await createLead({
         name: name.trim(),
         phone: phone.trim(),
-        company_name: company.trim() || 'Individual',
-        city: city.trim() || 'Hyderabad',
-        state: state.trim() || 'Telangana',
-        email: email.trim(),
-        sub_requirement: notes.trim(),
-        expected_value: Number(expectedValue) || 250000,
-        budget: Number(expectedValue) || 250000,
-        status: 'new',
-        priority: 'high',
-        followup_count: 0,
-        deal_type: 'new_business',
-        source: 'walk_in',
-        tag_id: 'tag-01',
-        created_at: new Date().toISOString(),
-      };
+        notes: notes.trim(),
+        company_name: company.trim() || undefined,
+        expected_value: expectedValue ? Number(expectedValue) : 0,
+        city: city.trim() || undefined,
+        state: state.trim() || undefined,
+        next_followup_date: new Date(Date.now() + 2 * 86400000)
+          .toISOString()
+          .slice(0, 10),
+      }).unwrap();
 
-      if (onSaveLead) {
-        onSaveLead(newLead, openDetail);
-      }
-
-      Alert.alert(
-        'Lead Created',
-        `Lead for ${name} has been added to your pipeline and logged in today's ledger.`
-      );
+      Alert.alert('Lead Created', `${name} has been added and assigned to you.`);
+      // Reset fields
+      setName('');
+      setPhone('');
+      setNotes('');
+      setCompany('');
+      setExpectedValue('');
+      setCity('');
       handleClose();
     } catch (err) {
-      console.error('[QuickAddLeadModal] error:', err);
-      Alert.alert('Error', 'Could not create lead. Please retry.');
-    } finally {
-      setLoading(false);
+      const msg = err?.data?.message || err?.message || 'Could not create lead.';
+      Alert.alert('Create Lead Failed', msg);
     }
   };
 
   return (
     <BottomSheet
       visible={visible}
-      title="⚡ Quick Add Lead"
       onClose={handleClose}
-      isSubmitting={loading}
+      title="⚡ Quick Add Inbound Lead"
+      subtitle="Automatically allocated to your queue"
     >
-      <View style={styles.container}>
-        {/* Required Section Card */}
-        <View style={styles.requiredSection}>
-          <Text style={styles.sectionHeader}>⭐ Required Information (Mandatory)</Text>
-
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Required Section */}
+        <View style={styles.requiredBox}>
+          <Text style={styles.sectionHeader}>⭐ Required Information</Text>
           <FluentInput
             label="Contact Person Name"
-            required
-            placeholder="e.g. Dr. Harish Reddy / Principal Sharma"
             value={name}
             onChangeText={setName}
+            placeholder="e.g. Dr. Harish Reddy / Principal Sharma"
+            required
           />
-
           <FluentInput
             label="Phone Number"
-            required
-            placeholder="e.g. +91 98480 12345"
-            keyboardType="phone-pad"
             value={phone}
             onChangeText={setPhone}
+            placeholder="e.g. +91 98480 12345"
+            keyboardType="phone-pad"
+            required
           />
-
           <FluentInput
             label="Discussion / Requirement Notes"
-            required
-            placeholder="e.g. Inquired about Campus ERP, parent mobile app, fee gateway..."
-            multiline
             value={notes}
             onChangeText={setNotes}
-            helperText="Automatically logged into Daily Interaction Waterfall."
+            placeholder="Summarize requirements, key modules requested, and commitments..."
+            multiline
+            numberOfLines={3}
+            required
           />
         </View>
 
-        {/* Optional Section Card */}
-        <View style={styles.optionalSection}>
-          <Text style={styles.sectionHeader}>⚙️ Optional Details (Defaults Provided)</Text>
-
+        {/* Optional Section */}
+        <View style={styles.optionalBox}>
+          <Text style={styles.sectionHeaderOptional}>⚙️ Optional Details</Text>
           <FluentInput
-            label="Company / School / Organization"
-            placeholder="e.g. St. Xavier Senior School"
+            label="Company / School Name"
             value={company}
             onChangeText={setCompany}
+            placeholder="e.g. Heritage Valley School"
           />
-
           <FluentInput
             label="Expected Deal Value (₹)"
-            placeholder="e.g. 250000"
-            keyboardType="numeric"
             value={expectedValue}
             onChangeText={setExpectedValue}
+            placeholder="e.g. 250000"
+            keyboardType="numeric"
           />
-
           <FluentInput
             label="City"
-            placeholder="e.g. Hyderabad / Bengaluru"
             value={city}
             onChangeText={setCity}
-          />
-
-          <FluentInput
-            label="Email Address"
-            placeholder="contact@institution.org"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
+            placeholder="e.g. Hyderabad / Delhi"
           />
         </View>
 
-        {/* Actions Row */}
+        {/* Action Buttons */}
         <View style={styles.actionsRow}>
           <FluentButton
-            variant="secondary"
             title="Cancel"
             onPress={handleClose}
-            disabled={loading}
-            style={styles.cancelBtn}
+            variant="secondary"
+            size="large"
+            style={styles.actionBtn}
+            disabled={isLoading}
           />
-
           <FluentButton
-            variant="primary"
             title="Save and Close"
-            loading={loading}
-            onPress={() => handleSave(false)}
-            style={styles.saveBtn}
+            onPress={handleSave}
+            variant="primary"
+            size="large"
+            loading={isLoading}
+            style={styles.actionBtn}
           />
         </View>
-      </View>
+      </ScrollView>
     </BottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    gap: 14,
-    paddingBottom: 20,
+  scroll: {
+    paddingBottom: spacing.xxl,
   },
-  requiredSection: {
+  requiredBox: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderWidth: 1,
-    borderLeftColor: colors.primary,
     borderLeftWidth: 3,
-    borderRadius: radius.sm,
+    borderLeftColor: colors.primary,
+    borderRadius: 6,
     padding: spacing.md,
+    marginBottom: spacing.md,
   },
-  optionalSection: {
+  sectionHeader: {
+    ...typography.overline,
+    color: colors.primary,
+    marginBottom: spacing.sm,
+    fontSize: 11,
+  },
+  optionalBox: {
     backgroundColor: colors.surfaceAlt,
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: radius.sm,
+    borderRadius: 6,
     padding: spacing.md,
+    marginBottom: spacing.md,
   },
-  sectionHeader: {
-    ...typography.captionBold,
-    color: colors.textPrimary,
-    fontSize: 12,
+  sectionHeaderOptional: {
+    ...typography.overline,
+    color: colors.textSecondary,
     marginBottom: spacing.sm,
-    paddingBottom: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    borderStyle: 'dashed',
+    fontSize: 11,
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
     marginTop: spacing.xs,
   },
-  cancelBtn: {
+  actionBtn: {
     flex: 1,
   },
-  saveBtn: {
-    flex: 2,
-  },
 });
-
-export default QuickAddLeadModal;

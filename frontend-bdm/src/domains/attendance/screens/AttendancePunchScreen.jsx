@@ -1,137 +1,139 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useSelector, useDispatch } from 'react-redux';
-import { colors, radius, spacing, typography, shadows } from '../../../shared/theme/index.js';
-import { FluentButton } from '../../../shared/components/index.js';
-import { toggleAttendancePunch } from '../../../shared/store/slices/uiSlice.js';
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '../../../shared/theme/colors.js';
+import { typography } from '../../../shared/theme/typography.js';
+import { spacing } from '../../../shared/theme/spacing.js';
+import { FluentCard } from '../../../shared/components/FluentCard.jsx';
+import { FluentButton } from '../../../shared/components/FluentButton.jsx';
+import { PunchHeroButton } from '../components/PunchHeroButton.jsx';
+import {
+  useGetTodayAttendanceQuery,
+  usePunchInMutation,
+  usePunchOutMutation,
+} from '../api.js';
+import { formatDate, formatTime } from '../../../shared/utils/formatters.js';
 import { ROUTES } from '../../../shared/navigation/routes.js';
 
 export const AttendancePunchScreen = ({ navigation }) => {
-  const dispatch = useDispatch();
-  const isPunchedIn = useSelector((state) => state.ui.isPunchedIn);
-  const lastPunchTime = useSelector((state) => state.ui.lastPunchTime);
-  const [loading, setLoading] = useState(false);
+  const { data: todayStatus, isLoading, refetch } = useGetTodayAttendanceQuery();
+  const [punchIn, { isLoading: isPunchingIn }] = usePunchInMutation();
+  const [punchOut, { isLoading: isPunchingOut }] = usePunchOutMutation();
+
+  const isPunchedIn = Boolean(todayStatus?.is_punched_in);
+  const isPunchedOut = Boolean(todayStatus?.is_punched_out);
+  const punchLoading = isPunchingIn || isPunchingOut;
 
   const handlePunchToggle = async () => {
     try {
-      setLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      dispatch(toggleAttendancePunch());
-      Alert.alert(
-        'Punch Recorded',
-        isPunchedIn
-          ? 'You have successfully punched out for today.'
-          : 'You have successfully punched in for today.'
-      );
+      if (!isPunchedIn) {
+        await punchIn().unwrap();
+        Alert.alert('Punch In Successful', 'Your daily attendance has been recorded.');
+      } else {
+        await punchOut().unwrap();
+        Alert.alert('Punch Out Successful', 'Your shift check-out has been recorded.');
+      }
+      refetch();
     } catch (err) {
-      console.error('[AttendancePunch] error:', err);
-      Alert.alert('Punch Failed', 'Could not record attendance. Please retry.');
-    } finally {
-      setLoading(false);
+      const msg = err?.data?.message || err?.message || 'Attendance action failed.';
+      Alert.alert('Attendance Error', msg);
     }
   };
 
+  const todayStr = formatDate(new Date());
+
   return (
-    <View style={styles.container}>
-      {/* Hero Punch Card */}
-      <View style={styles.heroCard}>
-        <Text style={styles.dateLabel}>TODAY · 22 SEPTEMBER 2026</Text>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Hero Card */}
+        <FluentCard style={styles.heroCard}>
+          <Text style={styles.dateLabel}>TODAY · {todayStr.toUpperCase()}</Text>
 
-        <TouchableOpacity
-          style={[
-            styles.punchCircle,
-            isPunchedIn ? styles.punchedInCircle : styles.punchedOutCircle,
-            loading && styles.disabled,
-          ]}
-          onPress={handlePunchToggle}
-          disabled={loading}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.clockIcon}>⏰</Text>
-          <Text style={styles.punchActionText}>
-            {isPunchedIn ? 'PUNCH OUT' : 'PUNCH IN'}
-          </Text>
-        </TouchableOpacity>
+          {isLoading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : (
+            <PunchHeroButton
+              isPunchedIn={isPunchedIn}
+              onPress={handlePunchToggle}
+              loading={punchLoading}
+            />
+          )}
 
-        <Text style={styles.punchTimestamp}>
-          {isPunchedIn ? `Checked in at ${lastPunchTime}` : 'Not checked in yet'}
-        </Text>
-      </View>
+          <View style={styles.statusBox}>
+            <Text style={styles.statusText}>
+              {isPunchedOut
+                ? `Shift Completed · Out at ${formatTime(todayStatus?.punch_out)}`
+                : isPunchedIn
+                ? `Active Shift · Checked In at ${formatTime(todayStatus?.punch_in)}`
+                : 'Not Checked In Yet'}
+            </Text>
+            {todayStatus?.total_hours ? (
+              <Text style={styles.hoursText}>
+                Total Hours: {todayStatus.total_hours} hrs
+              </Text>
+            ) : null}
+          </View>
+        </FluentCard>
 
-      <FluentButton
-        variant="secondary"
-        size="default"
-        title="View Monthly Attendance History ›"
-        onPress={() => navigation.navigate(ROUTES.ATTENDANCE_HISTORY)}
-        style={styles.historyBtn}
-      />
-    </View>
+        {/* View Monthly History CTA */}
+        <FluentButton
+          title="View Monthly Attendance History ›"
+          onPress={() => navigation.navigate(ROUTES.ATTENDANCE_HISTORY)}
+          variant="secondary"
+          size="large"
+          style={styles.historyBtn}
+        />
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-    padding: spacing.pagePaddingHorizontal,
-    paddingTop: spacing.lg,
-    gap: spacing.md,
+    backgroundColor: colors.canvas,
+  },
+  scrollContent: {
+    padding: spacing.md,
   },
   heroCard: {
-    backgroundColor: '#004578',
-    borderRadius: radius.md,
-    padding: spacing.xxl,
+    padding: spacing.xl,
     alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.level2,
+    marginBottom: spacing.md,
   },
   dateLabel: {
     ...typography.overline,
-    color: '#D6ECFF',
-    fontSize: 12,
-    letterSpacing: 0.5,
-    marginBottom: spacing.xl,
+    color: colors.textSecondary,
+    letterSpacing: 1,
   },
-  punchCircle: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+  loadingBox: {
+    height: 200,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.xl,
-    borderWidth: 4,
-    ...shadows.level3,
   },
-  punchedInCircle: {
-    backgroundColor: colors.error,
-    borderColor: '#F1707B',
+  statusBox: {
+    alignItems: 'center',
+    marginTop: spacing.sm,
   },
-  punchedOutCircle: {
-    backgroundColor: colors.success,
-    borderColor: '#82C982',
-  },
-  clockIcon: {
-    fontSize: 32,
-    marginBottom: 4,
-  },
-  punchActionText: {
+  statusText: {
     ...typography.bodyBold,
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    color: colors.textPrimary,
   },
-  punchTimestamp: {
-    ...typography.body,
-    color: '#FFFFFF',
-    fontSize: 13,
+  hoursText: {
+    ...typography.caption,
+    color: colors.primary,
+    marginTop: 4,
   },
   historyBtn: {
     marginTop: spacing.xs,
   },
-  disabled: {
-    opacity: 0.6,
-  },
 });
-
-export default AttendancePunchScreen;

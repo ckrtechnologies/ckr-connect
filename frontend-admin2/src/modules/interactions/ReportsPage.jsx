@@ -41,7 +41,9 @@ export default function ReportsPage() {
       : Array.isArray(staffRes?.data)
       ? staffRes.data
       : [];
-    return list.filter((u) => u.role === 'bdm');
+    // Allow both admins and bdms to appear in the filter, 
+    // since admins can also log interactions.
+    return list;
   }, [staffRes]);
 
   const summary = summaryRes?.data?.summary || summaryRes?.data || {};

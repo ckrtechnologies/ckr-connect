@@ -1,21 +1,18 @@
 import { configureStore } from '@reduxjs/toolkit';
-import { setupListeners } from '@reduxjs/toolkit/query';
-import authReducer from './slices/authSlice.js';
-import uiReducer from './slices/uiSlice.js';
-import { baseApi } from './api.js';
+import { baseApi } from './baseApi.js';
+import authReducer from '../../domains/auth/slice.js';
+import leadsReducer from '../../domains/leads/slice.js';
+import uiReducer from './uiSlice.js';
 
 export const store = configureStore({
   reducer: {
-    auth: authReducer,
-    ui: uiReducer,
     [baseApi.reducerPath]: baseApi.reducer,
+    auth: authReducer,
+    leads: leadsReducer,
+    ui: uiReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: false,
     }).concat(baseApi.middleware),
 });
-
-setupListeners(store.dispatch);
-
-export default store;

@@ -1,24 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, radius, spacing, typography } from '../theme/index.js';
-import FluentButton from './FluentButton.jsx';
+import { colors } from '../theme/colors.js';
+import { typography } from '../theme/typography.js';
+import { spacing } from '../theme/spacing.js';
+import { FluentButton } from './FluentButton.jsx';
 
-/**
- * EmptyState Placeholder
- *
- * @param {object} props
- * @param {string} [props.icon='🔍']
- * @param {string} props.title
- * @param {string} props.message
- * @param {string} [props.actionLabel]
- * @param {() => void} [props.onAction]
- */
 export const EmptyState = ({
   icon = '🔍',
-  title = 'No items found',
-  message = 'There is currently no data matching this view.',
-  actionLabel,
-  onAction,
+  title = 'No records found',
+  message = 'Try adjusting your filters or search keywords.',
+  actionLabel = null,
+  onAction = null,
 }) => {
   return (
     <View style={styles.container}>
@@ -27,11 +19,11 @@ export const EmptyState = ({
       <Text style={styles.message}>{message}</Text>
       {actionLabel && onAction ? (
         <FluentButton
-          variant="secondary"
-          size="sm"
           title={actionLabel}
           onPress={onAction}
-          style={styles.actionBtn}
+          variant="secondary"
+          size="small"
+          style={styles.btn}
         />
       ) : null}
     </View>
@@ -40,18 +32,14 @@ export const EmptyState = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    padding: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: spacing.md,
+    paddingVertical: spacing.xxxl,
+    paddingHorizontal: spacing.lg,
   },
   icon: {
-    fontSize: 32,
-    marginBottom: spacing.xs,
+    fontSize: 40,
+    marginBottom: spacing.sm,
   },
   title: {
     ...typography.subtitle,
@@ -63,13 +51,9 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: spacing.md,
-    lineHeight: 18,
     maxWidth: 260,
   },
-  actionBtn: {
-    minWidth: 120,
+  btn: {
+    marginTop: spacing.md,
   },
 });
-
-export default EmptyState;

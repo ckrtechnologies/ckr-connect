@@ -1,17 +1,31 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Alert,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
-import { colors, radius, spacing, typography } from '../../../shared/theme/index.js';
-import { FluentButton, FluentInput, FluentCard } from '../../../shared/components/index.js';
-import { setCredentials } from '../../../shared/store/slices/authSlice.js';
-import { INITIAL_BDM_USER } from '../../../shared/utils/mockSeedData.js';
-import { ROUTES } from '../../../shared/navigation/routes.js';
+import { colors } from '../../../shared/theme/colors.js';
+import { typography } from '../../../shared/theme/typography.js';
+import { spacing } from '../../../shared/theme/spacing.js';
+import { radius } from '../../../shared/theme/radius.js';
+import { FluentButton } from '../../../shared/components/FluentButton.jsx';
+import { FluentInput } from '../../../shared/components/FluentInput.jsx';
+import { FluentCard } from '../../../shared/components/FluentCard.jsx';
+import { useLoginMutation } from '../api.js';
+import { setCredentials } from '../slice.js';
+import { storage } from '../../../shared/utils/storage.js';
 
-export const LoginScreen = ({ navigation }) => {
-  const dispatch = useDispatch();
+export const LoginScreen = () => {
   const [email, setEmail] = useState('aarav.sharma@ckrtechnologies.in');
-  const [password, setPassword] = useState('••••••••••••');
-  const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState('password123');
+  const [login, { isLoading }] = useLoginMutation();
+  const dispatch = useDispatch();
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -20,122 +34,167 @@ export const LoginScreen = ({ navigation }) => {
     }
 
     try {
-      setLoading(true);
-      // Simulate authentication / network request
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      const response = await login({
+        email: email.trim(),
+        password: password.trim(),
+      }).unwrap();
 
-      dispatch(
-        setCredentials({
-          user: INITIAL_BDM_USER,
-          token: 'mock-jwt-token-aarav',
-        })
-      );
+      const token =
+        response.token ||
+        response.data?.token ||
+        response.data?.accessToken ||
+        response.accessToken;
+      const user = response.user || response.data?.user;
 
-      if (!INITIAL_BDM_USER.has_seen_onboarding) {
-        navigation.replace(ROUTES.ONBOARDING);
-      } else {
-        navigation.replace(ROUTES.MAIN_TABS);
+      if (!token) {
+        throw new Error('Token not returned by authentication server');
       }
+
+      // Persist in secure storage
+      await storage.setToken(token);
+      await storage.setUser(user);
+
+      // Dispatch to Redux
+      dispatch(setCredentials({ token, user }));
     } catch (err) {
-      console.error('[LoginScreen] login failed:', err);
-      Alert.alert('Sign In Failed', 'Invalid email or password. Please check your credentials.');
-    } finally {
-      setLoading(false);
+      const errorMsg =
+        err?.data?.message ||
+        err?.message ||
+        'Invalid credentials. Please verify your email and password.';
+      Alert.alert('Sign In Failed', errorMsg);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* Brand Header */}
-        <View style={styles.header}>
-          <View style={styles.brandBadge}>
-            <Text style={styles.brandBadgeText}>CKR CONNECT</Text>
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardView}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Brand Header */}
+          <View style={styles.header}>
+            <View style={styles.logoBadge}>
+              <Text style={styles.logoIcon}>🔒</Text>
+            </View>
+            <View style={styles.brandPill}>
+              <Text style={styles.brandPillText}>CKR CONNECT</Text>
+            </View>
+            <Text style={styles.title}>BDM Portal Login</Text>
+            <Text style={styles.subtitle}>
+              Sign in to start telecalling & attendance
+            </Text>
           </View>
-          <Text style={styles.title}>BDM Portal Login</Text>
-          <Text style={styles.subtitle}>Sign in to start telecalling & attendance</Text>
-        </View>
 
-        {/* Credentials Form Card */}
-        <FluentCard style={styles.formCard}>
-          <FluentInput
-            label="Employee ID / Email"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholder="e.g. aarav.sharma@ckrtechnologies.in"
-          />
+          {/* Login Form Card */}
+          <FluentCard style={styles.card}>
+            <FluentInput
+              label="Employee ID / Work Email"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="e.g. aarav.sharma@ckrtechnologies.in"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              required
+            />
 
-          <FluentInput
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            placeholder="Enter your password"
-          />
+            <FluentInput
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              placeholder="••••••••••••"
+              secureTextEntry
+              required
+            />
 
-          <FluentButton
-            title="Sign In to My App"
-            loading={loading}
-            onPress={handleLogin}
-            style={styles.submitBtn}
-          />
-        </FluentCard>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <FluentButton
+              title="Sign In to My App"
+              onPress={handleLogin}
+              loading={isLoading}
+              variant="primary"
+              size="large"
+              style={styles.submitBtn}
+            />
+          </FluentCard>
+
+          {/* Footer Assistance */}
+          <Text style={styles.footerNote}>
+            CKR Technologies Internal Operations System · v1.0
+          </Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.canvas,
+  },
+  keyboardView: {
+    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: spacing.pagePaddingHorizontal,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xxl,
   },
   header: {
     alignItems: 'center',
     marginBottom: spacing.xl,
   },
-  brandBadge: {
+  logoBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.md,
     backgroundColor: colors.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: '#C7E0F4',
-    marginBottom: spacing.sm,
   },
-  brandBadgeText: {
+  logoIcon: {
+    fontSize: 26,
+  },
+  brandPill: {
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.xs,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    marginBottom: spacing.xs,
+  },
+  brandPillText: {
     ...typography.overline,
     color: colors.primary,
-    fontSize: 10,
-    fontWeight: '700',
   },
   title: {
     ...typography.title,
     color: colors.textPrimary,
-    marginBottom: spacing.xs,
+    marginTop: spacing.xs,
   },
   subtitle: {
-    ...typography.body,
+    ...typography.caption,
     color: colors.textSecondary,
-    fontSize: 13,
+    marginTop: 4,
   },
-  formCard: {
+  card: {
     padding: spacing.lg,
   },
   submitBtn: {
     marginTop: spacing.sm,
-    height: 44,
+  },
+  footerNote: {
+    ...typography.caption,
+    color: colors.textDisabled,
+    textAlign: 'center',
+    marginTop: spacing.xl,
   },
 });
-
-export default LoginScreen;

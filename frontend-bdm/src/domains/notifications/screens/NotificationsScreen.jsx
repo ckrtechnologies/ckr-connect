@@ -1,152 +1,128 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors, radius, spacing, typography, shadows } from '../../../shared/theme/index.js';
-import { FluentCard } from '../../../shared/components/index.js';
-import { INITIAL_NOTIFICATIONS } from '../../../shared/utils/mockSeedData.js';
-import { ROUTES } from '../../../shared/navigation/routes.js';
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '../../../shared/theme/colors.js';
+import { typography } from '../../../shared/theme/typography.js';
+import { spacing } from '../../../shared/theme/spacing.js';
+import { FluentButton } from '../../../shared/components/FluentButton.jsx';
+import { EmptyState } from '../../../shared/components/EmptyState.jsx';
+import { NotificationCardItem } from '../components/NotificationCardItem.jsx';
+import {
+  useGetNotificationsQuery,
+  useMarkNotificationAsReadMutation,
+  useMarkAllNotificationsAsReadMutation,
+} from '../api.js';
 
-export const NotificationsScreen = ({ navigation }) => {
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+export const NotificationsScreen = () => {
+  const { data: notificationsData, isLoading, refetch, isFetching } = useGetNotificationsQuery();
+  const [markRead] = useMarkNotificationAsReadMutation();
+  const [markAllRead, { isLoading: isMarkingAll }] = useMarkAllNotificationsAsReadMutation();
 
-  const handlePress = (notif) => {
-    // Mark as read
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === notif.id ? { ...n, is_read: true } : n))
-    );
+  const notifications =
+    notificationsData?.items || (Array.isArray(notificationsData) ? notificationsData : []);
+  const unreadCount =
+    notificationsData?.unread_count ?? notifications.filter((n) => !n.is_read).length;
 
-    if (notif.lead_id) {
-      navigation.navigate(ROUTES.LEAD_DETAIL, { leadId: notif.lead_id });
+  const handleMarkRead = async (id) => {
+    try {
+      await markRead(id).unwrap();
+    } catch (err) {
+      Alert.alert('Action Failed', 'Could not mark notification as read.');
     }
   };
 
-  const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllRead().unwrap();
+      Alert.alert('All Marked Read', 'All notifications cleared.');
+    } catch (err) {
+      Alert.alert('Action Failed', 'Could not clear notifications.');
+    }
   };
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
-
   return (
-    <View style={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>My In-App Alerts</Text>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      {/* Header Bar */}
+      <View style={styles.headerBar}>
+        <View>
+          <Text style={styles.title}>My In-App Alerts</Text>
+          <Text style={styles.subtitle}>
+            {unreadCount > 0 ? `${unreadCount} unread alert${unreadCount === 1 ? '' : 's'}` : 'All caught up'}
+          </Text>
+        </View>
+
         {unreadCount > 0 ? (
-          <TouchableOpacity onPress={handleMarkAllRead}>
-            <Text style={styles.markAllText}>Mark all as read</Text>
-          </TouchableOpacity>
+          <FluentButton
+            title="Mark All Read"
+            onPress={handleMarkAllRead}
+            variant="secondary"
+            size="small"
+            loading={isMarkingAll}
+          />
         ) : null}
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {notifications.map((item) => {
-          const isOverdue = item.type === 'followup_overdue';
-          const borderColor = isOverdue ? colors.error : colors.primary;
-
-          return (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.card,
-                { borderLeftColor: borderColor, borderLeftWidth: 3.5 },
-                !item.is_read && styles.unreadCard,
-              ]}
-              onPress={() => handlePress(item)}
-              activeOpacity={0.75}
-            >
-              <View style={styles.cardTop}>
-                <Text style={styles.messageText}>{item.message}</Text>
-                {!item.is_read ? <View style={styles.unreadDot} /> : null}
-              </View>
-
-              <View style={styles.metaRow}>
-                <Text style={styles.sourceText}>Delivered via Socket.io</Text>
-                {item.lead_id ? (
-                  <Text style={styles.viewLeadLink}>Tap to view lead ›</Text>
-                ) : null}
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-    </View>
+      <FlatList
+        data={notifications}
+        keyExtractor={(item) => String(item.id)}
+        contentContainerStyle={styles.listContent}
+        onRefresh={refetch}
+        refreshing={isFetching}
+        renderItem={({ item }) => (
+          <NotificationCardItem item={item} onMarkRead={handleMarkRead} />
+        )}
+        ListEmptyComponent={
+          isLoading ? (
+            <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+          ) : (
+            <EmptyState
+              icon="🔔"
+              title="No alerts right now"
+              message="New lead allocations and follow-up milestones will appear here in real time."
+            />
+          )
+        }
+      />
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.canvas,
   },
-  headerRow: {
+  headerBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.pagePaddingHorizontal,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   title: {
     ...typography.subtitle,
-    fontSize: 16,
     color: colors.textPrimary,
   },
-  markAllText: {
-    ...typography.captionBold,
-    fontSize: 11,
-    color: colors.primary,
-  },
-  scrollContent: {
-    padding: spacing.pagePaddingHorizontal,
-    paddingBottom: 40,
-    gap: 8,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    padding: 12,
-    ...shadows.level1,
-  },
-  unreadCard: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#C7E0F4',
-  },
-  cardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  messageText: {
-    ...typography.bodyBold,
-    fontSize: 13,
-    color: colors.textPrimary,
-    lineHeight: 18,
-    flex: 1,
-  },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-    marginTop: 4,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  sourceText: {
+  subtitle: {
     ...typography.caption,
-    fontSize: 11,
     color: colors.textSecondary,
+    marginTop: 1,
   },
-  viewLeadLink: {
-    ...typography.captionBold,
-    fontSize: 11,
-    color: colors.primary,
+  listContent: {
+    padding: spacing.md,
+    paddingBottom: spacing.xxxl,
+  },
+  loader: {
+    marginTop: spacing.xxl,
   },
 });
-
-export default NotificationsScreen;

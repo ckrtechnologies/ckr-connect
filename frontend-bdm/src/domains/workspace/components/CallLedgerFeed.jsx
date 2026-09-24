@@ -1,88 +1,118 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors, radius, spacing, typography, shadows } from '../../../shared/theme/index.js';
+import { colors } from '../../../shared/theme/colors.js';
+import { typography } from '../../../shared/theme/typography.js';
+import { spacing } from '../../../shared/theme/spacing.js';
+import { radius } from '../../../shared/theme/radius.js';
+import { FluentCard } from '../../../shared/components/FluentCard.jsx';
 import { formatTime } from '../../../shared/utils/formatters.js';
 
-export const CallLedgerFeed = ({ interactions = [], leads = [], onSelectLead }) => {
+export const CallLedgerFeed = ({ interactions = [], onSelectLead }) => {
+  if (interactions.length === 0) {
+    return (
+      <FluentCard style={styles.emptyCard}>
+        <Text style={styles.emptyIcon}>📞</Text>
+        <Text style={styles.emptyTitle}>No calls logged today yet</Text>
+        <Text style={styles.emptySubtitle}>
+          Use "Add Inbound Lead" or tap on an untouched lead to start dialing.
+        </Text>
+      </FluentCard>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <View style={styles.headerRow}>
+      <View style={styles.header}>
         <Text style={styles.title}>
           Today's Call Ledger & Results ({interactions.length})
         </Text>
-        <Text style={styles.dateBadge}>22 Sep 2026</Text>
+        <Text style={styles.dateLabel}>Live Feed</Text>
       </View>
 
-      {interactions.map((item) => {
-        const lead = leads.find((l) => l.id === item.lead_id) || {};
-        const isPositive = item.call_result_type === 'positive';
-        const isNeutral = item.call_result_type === 'neutral';
+      {interactions.map((int, idx) => {
+        const channel = int.channel || int.type;
+        const icon = channel === 'whatsapp' ? '💬' : channel === 'meeting' ? '👥' : '📞';
+        const isPositive =
+          int.call_result_type === 'positive' ||
+          int.outcome === 'Requirement Captured' ||
+          int.outcome === 'connected' ||
+          int.outcome === 'Interested';
+        const isNeutral =
+          int.call_result_type === 'neutral' ||
+          int.outcome === 'callback_requested' ||
+          int.outcome === 'ringing';
 
-        const pillBg = isPositive
-          ? colors.successBg
-          : isNeutral
-          ? colors.warningBg
-          : colors.errorBg;
-        const pillText = isPositive
-          ? colors.success
-          : isNeutral
-          ? colors.urgentAmberText
-          : colors.error;
-        const pillBorder = isPositive
-          ? '#C3E6CB'
-          : isNeutral
-          ? colors.urgentAmberBorder
-          : '#F5C6CB';
-
-        const icon = item.type === 'call' ? '📞' : item.type === 'whatsapp' ? '💬' : '👥';
+        const resultLabel = int.outcome || int.call_result_label || int.call_result || 'Call Logged';
+        const notesText = int.discussion_notes || int.notes;
 
         return (
           <TouchableOpacity
-            key={item.id}
-            style={styles.card}
-            onPress={() => onSelectLead(item.lead_id)}
-            activeOpacity={0.75}
+            key={int.id || idx}
+            onPress={() => onSelectLead(int.lead_id)}
+            activeOpacity={0.7}
           >
-            <View style={styles.cardHeader}>
-              <View style={styles.leadInfo}>
-                <View style={styles.nameRow}>
-                  <Text style={styles.icon}>{icon}</Text>
-                  <Text style={styles.leadName}>{lead.name || 'Contact'}</Text>
-                </View>
-                <Text style={styles.companyName}>
-                  {lead.company_name || 'Individual'}
-                </Text>
-              </View>
-
-              <View style={styles.outcomeRight}>
-                <View
-                  style={[
-                    styles.outcomePill,
-                    { backgroundColor: pillBg, borderColor: pillBorder },
-                  ]}
-                >
-                  <Text style={[styles.outcomeText, { color: pillText }]}>
-                    {item.call_result_label || 'Call Logged'}
+            <FluentCard style={styles.itemCard}>
+              <View style={styles.topRow}>
+                <View style={styles.contactInfo}>
+                  <View style={styles.nameRow}>
+                    <Text style={styles.icon}>{icon}</Text>
+                    <Text style={styles.contactName} numberOfLines={1}>
+                      {int.lead_name || int.contact_name || int.name || 'Contact'}
+                    </Text>
+                  </View>
+                  <Text style={styles.companyName} numberOfLines={1}>
+                    {int.company_name || 'Individual / Institution'}
                   </Text>
                 </View>
-                <Text style={styles.timeText}>{formatTime(item.created_at)}</Text>
-              </View>
-            </View>
 
-            {/* Discussion notes quote */}
-            <View style={styles.notesBox}>
-              <Text style={styles.notesText}>"{item.notes}"</Text>
-            </View>
-
-            {/* Next action indicator */}
-            {item.next_action ? (
-              <View style={styles.nextActionRow}>
-                <Text style={styles.nextActionLabel}>⏰ Next Action:</Text>
-                <Text style={styles.nextActionText} numberOfLines={1}>
-                  {item.next_action}
-                </Text>
+                <View style={styles.resultCol}>
+                  <View
+                    style={[
+                      styles.resultPill,
+                      isPositive
+                        ? styles.pillPositive
+                        : isNeutral
+                        ? styles.pillNeutral
+                        : styles.pillNegative,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.resultText,
+                        {
+                          color: isPositive
+                            ? colors.successText
+                            : isNeutral
+                            ? colors.warningText
+                            : colors.errorText,
+                        },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {resultLabel}
+                    </Text>
+                  </View>
+                  <Text style={styles.timeText}>{formatTime(int.created_at)}</Text>
+                </View>
               </View>
-            ) : null}
+
+              {notesText ? (
+                <View style={styles.notesBox}>
+                  <Text style={styles.notesText} numberOfLines={2}>
+                    "{notesText}"
+                  </Text>
+                </View>
+              ) : null}
+
+              {int.next_action ? (
+                <View style={styles.nextActionRow}>
+                  <Text style={styles.nextActionLabel}>⏰ Next Action: </Text>
+                  <Text style={styles.nextActionVal} numberOfLines={1}>
+                    {int.next_action}
+                  </Text>
+                </View>
+              ) : null}
+            </FluentCard>
           </TouchableOpacity>
         );
       })}
@@ -92,113 +122,128 @@ export const CallLedgerFeed = ({ interactions = [], leads = [], onSelectLead }) 
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: spacing.xs,
+    marginBottom: spacing.lg,
   },
-  headerRow: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.xs,
-    paddingHorizontal: 2,
   },
   title: {
     ...typography.captionBold,
-    fontSize: 13,
     color: colors.textPrimary,
   },
-  dateBadge: {
+  dateLabel: {
     ...typography.caption,
-    fontSize: 11,
     color: colors.textSecondary,
   },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    padding: spacing.cardPadding,
-    marginBottom: spacing.sm,
-    ...shadows.level1,
+  itemCard: {
+    padding: spacing.md,
+    marginBottom: spacing.xs + 2,
   },
-  cardHeader: {
+  topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 8,
   },
-  leadInfo: {
+  contactInfo: {
     flex: 1,
+    marginRight: spacing.sm,
   },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
   },
   icon: {
     fontSize: 14,
+    marginRight: spacing.xs,
   },
-  leadName: {
+  contactName: {
     ...typography.bodyBold,
     color: colors.textPrimary,
-    fontSize: 13,
   },
   companyName: {
     ...typography.caption,
     color: colors.textSecondary,
-    fontSize: 12,
-    marginTop: 1,
+    marginTop: 2,
   },
-  outcomeRight: {
+  resultCol: {
     alignItems: 'flex-end',
   },
-  outcomePill: {
-    paddingHorizontal: 6,
+  resultPill: {
+    paddingHorizontal: spacing.xs + 2,
     paddingVertical: 2,
-    borderRadius: radius.xs,
+    borderRadius: radius.pill,
     borderWidth: 1,
   },
-  outcomeText: {
+  pillPositive: {
+    backgroundColor: colors.successBg,
+    borderColor: '#C3E6CB',
+  },
+  pillNeutral: {
+    backgroundColor: colors.warningBg,
+    borderColor: colors.warningBorder,
+  },
+  pillNegative: {
+    backgroundColor: colors.errorBg,
+    borderColor: colors.errorBorder,
+  },
+  resultText: {
     ...typography.overline,
     fontSize: 9,
-    fontWeight: '700',
   },
   timeText: {
     ...typography.caption,
-    fontSize: 10,
     color: colors.textSecondary,
+    fontSize: 10,
     marginTop: 2,
   },
   notesBox: {
     backgroundColor: colors.surfaceAlt,
-    borderLeftColor: colors.primary,
     borderLeftWidth: 2,
-    padding: 6,
+    borderLeftColor: colors.primary,
+    padding: spacing.xs + 2,
     borderRadius: radius.xs,
-    marginTop: 6,
+    marginTop: spacing.xs,
   },
   notesText: {
-    ...typography.caption,
+    ...typography.body,
+    fontSize: 12,
     color: colors.textPrimary,
     fontStyle: 'italic',
-    lineHeight: 16,
   },
   nextActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 6,
+    marginTop: spacing.xs,
   },
   nextActionLabel: {
     ...typography.captionBold,
-    fontSize: 10,
     color: colors.primary,
-  },
-  nextActionText: {
-    ...typography.caption,
     fontSize: 11,
+  },
+  nextActionVal: {
+    ...typography.caption,
     color: colors.textPrimary,
-    flex: 1,
+    fontSize: 11,
+  },
+  emptyCard: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
+  emptyIcon: {
+    fontSize: 32,
+    marginBottom: spacing.xs,
+  },
+  emptyTitle: {
+    ...typography.bodyBold,
+    color: colors.textPrimary,
+  },
+  emptySubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 4,
   },
 });
-
-export default CallLedgerFeed;

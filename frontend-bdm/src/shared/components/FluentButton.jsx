@@ -1,112 +1,80 @@
 import React from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, View } from 'react-native';
-import { colors, radius, spacing, typography } from '../theme/index.js';
+import { colors } from '../theme/colors.js';
+import { typography } from '../theme/typography.js';
+import { spacing } from '../theme/spacing.js';
+import { radius } from '../theme/radius.js';
 
-/**
- * Fluent 2 CTA Button with Crash-Resilience Loading Guards
- *
- * @param {object} props
- * @param {'primary'|'secondary'|'success'|'urgent'|'danger'|'ghost'} [props.variant='primary']
- * @param {'default'|'sm'|'md'|'large'} [props.size='default']
- * @param {boolean} [props.loading=false]
- * @param {boolean} [props.disabled=false]
- * @param {React.ReactNode} [props.icon]
- * @param {string} props.title
- * @param {() => void} props.onPress
- * @param {object} [props.style]
- * @param {object} [props.textStyle]
- */
 export const FluentButton = ({
+  title,
+  onPress,
   variant = 'primary',
-  size = 'default',
+  size = 'medium',
   loading = false,
   disabled = false,
   icon = null,
-  title,
-  children,
-  onPress,
-  style,
-  textStyle,
-  ...rest
+  style = null,
+  textStyle = null,
 }) => {
   const isActionDisabled = disabled || loading;
 
-  const getContainerStyle = () => {
+  const getVariantStyles = () => {
     switch (variant) {
       case 'secondary':
-        return styles.btnSecondary;
+        return {
+          btn: styles.btnSecondary,
+          text: styles.textSecondary,
+          spinnerColor: colors.primary,
+        };
       case 'success':
-        return styles.btnSuccess;
-      case 'urgent':
-        return styles.btnUrgent;
+        return {
+          btn: styles.btnSuccess,
+          text: styles.textSuccess,
+          spinnerColor: colors.textOnPrimary,
+        };
       case 'danger':
-        return styles.btnDanger;
-      case 'ghost':
-        return styles.btnGhost;
+        return {
+          btn: styles.btnDanger,
+          text: styles.textDanger,
+          spinnerColor: colors.textOnPrimary,
+        };
+      case 'subtle':
+        return {
+          btn: styles.btnSubtle,
+          text: styles.textSubtle,
+          spinnerColor: colors.primary,
+        };
       case 'primary':
       default:
-        return styles.btnPrimary;
+        return {
+          btn: styles.btnPrimary,
+          text: styles.textPrimary,
+          spinnerColor: colors.textOnPrimary,
+        };
     }
   };
 
-  const getTextColor = () => {
-    switch (variant) {
-      case 'secondary':
-        return colors.textPrimary;
-      case 'ghost':
-        return colors.primary;
-      case 'primary':
-      case 'success':
-      case 'urgent':
-      case 'danger':
-      default:
-        return colors.textOnPrimary;
-    }
-  };
-
-  const getSizeStyle = () => {
-    switch (size) {
-      case 'sm':
-        return styles.sizeSm;
-      case 'md':
-        return styles.sizeMd;
-      case 'large':
-        return styles.sizeLarge;
-      case 'default':
-      default:
-        return styles.sizeDefault;
-    }
-  };
+  const vStyles = getVariantStyles();
 
   return (
     <TouchableOpacity
       style={[
-        styles.base,
-        getContainerStyle(),
-        getSizeStyle(),
-        isActionDisabled && styles.disabled,
+        styles.baseBtn,
+        size === 'small' ? styles.btnSmall : size === 'large' ? styles.btnLarge : styles.btnMedium,
+        vStyles.btn,
+        isActionDisabled && styles.btnDisabled,
         style,
       ]}
       onPress={onPress}
       disabled={isActionDisabled}
       activeOpacity={0.75}
-      {...rest}
     >
       {loading ? (
-        <ActivityIndicator color={getTextColor()} size="small" />
+        <ActivityIndicator size="small" color={vStyles.spinnerColor} />
       ) : (
-        <View style={styles.contentRow}>
-          {icon ? <View style={styles.iconContainer}>{icon}</View> : null}
-          <Text
-            style={[
-              styles.textBase,
-              { color: getTextColor() },
-              size === 'sm' && styles.textSm,
-              textStyle,
-            ]}
-          >
-            {title || children}
-          </Text>
+        <View style={styles.contentContainer}>
+          {icon ? <View style={styles.iconWrapper}>{icon}</View> : null}
+          {title ? <Text style={[vStyles.text, textStyle]}>{title}</Text> : null}
         </View>
       )}
     </TouchableOpacity>
@@ -114,80 +82,81 @@ export const FluentButton = ({
 };
 
 const styles = StyleSheet.create({
-  base: {
+  baseBtn: {
     borderRadius: radius.sm,
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
   },
-  contentRow: {
+  contentContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconContainer: {
+  iconWrapper: {
     marginRight: spacing.xs,
   },
-  textBase: {
-    ...typography.bodyBold,
-    textAlign: 'center',
+  btnSmall: {
+    minHeight: 32,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  textSm: {
-    ...typography.captionBold,
+  btnMedium: {
+    minHeight: 44,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
-
-  // Variants
+  btnLarge: {
+    minHeight: 48,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+  },
   btnPrimary: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
     borderWidth: 1,
   },
+  textPrimary: {
+    ...typography.bodyBold,
+    color: colors.textOnPrimary,
+  },
   btnSecondary: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
     borderWidth: 1,
+  },
+  textSecondary: {
+    ...typography.bodyBold,
+    color: colors.textPrimary,
   },
   btnSuccess: {
     backgroundColor: colors.success,
     borderColor: colors.success,
     borderWidth: 1,
   },
-  btnUrgent: {
-    backgroundColor: colors.urgentAmber,
-    borderColor: colors.urgentAmberDark,
-    borderWidth: 1,
+  textSuccess: {
+    ...typography.bodyBold,
+    color: colors.textOnPrimary,
   },
   btnDanger: {
     backgroundColor: colors.error,
     borderColor: colors.error,
     borderWidth: 1,
   },
-  btnGhost: {
+  textDanger: {
+    ...typography.bodyBold,
+    color: colors.textOnPrimary,
+  },
+  btnSubtle: {
     backgroundColor: 'transparent',
-    borderWidth: 0,
+    borderColor: 'transparent',
+    borderWidth: 1,
   },
-
-  // Sizes
-  sizeSm: {
-    height: 32,
-    paddingHorizontal: spacing.sm,
+  textSubtle: {
+    ...typography.bodyBold,
+    color: colors.primary,
   },
-  sizeMd: {
-    height: 38,
-    paddingHorizontal: spacing.md,
-  },
-  sizeDefault: {
-    height: 44,
-    paddingHorizontal: spacing.lg,
-  },
-  sizeLarge: {
-    height: 48,
-    paddingHorizontal: spacing.xl,
-  },
-
-  disabled: {
+  btnDisabled: {
     opacity: 0.55,
   },
 });
-
-export default FluentButton;

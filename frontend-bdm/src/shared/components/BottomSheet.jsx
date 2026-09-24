@@ -6,82 +6,58 @@ import {
   TouchableOpacity,
   StyleSheet,
   TouchableWithoutFeedback,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { colors, radius, spacing, typography } from '../theme/index.js';
+import { colors } from '../theme/colors.js';
+import { typography } from '../theme/typography.js';
+import { spacing } from '../theme/spacing.js';
+import { radius } from '../theme/radius.js';
 
-/**
- * BottomSheet Modal Component
- *
- * @param {object} props
- * @param {boolean} props.visible
- * @param {string} props.title
- * @param {() => void} props.onClose
- * @param {boolean} [props.isSubmitting=false] Crash resilience: blocks dismiss while submitting
- * @param {React.ReactNode} props.children
- */
 export const BottomSheet = ({
   visible,
-  title,
   onClose,
-  isSubmitting = false,
+  title,
+  subtitle = null,
   children,
 }) => {
-  const handleBackdropPress = () => {
-    if (!isSubmitting && onClose) {
-      onClose();
-    }
-  };
-
   return (
     <Modal
-      visible={visible}
+      visible={Boolean(visible)}
       transparent
       animationType="slide"
-      onRequestClose={() => {
-        if (!isSubmitting && onClose) {
-          onClose();
-        }
-      }}
+      statusBarTranslucent
+      onRequestClose={onClose}
     >
-      <TouchableWithoutFeedback onPress={handleBackdropPress}>
-        <View style={styles.backdrop}>
-          <TouchableWithoutFeedback>
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-              style={styles.sheetContainer}
+      <View style={styles.backdrop}>
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.sheet}
+        >
+          <View style={styles.handleBar} />
+          <View style={styles.header}>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.title}>{title}</Text>
+              {subtitle ? (
+                <Text style={styles.subtitle}>{subtitle}</Text>
+              ) : null}
+            </View>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              {/* Header */}
-              <View style={styles.header}>
-                <Text style={styles.title} numberOfLines={1}>
-                  {title}
-                </Text>
-                <TouchableOpacity
-                  style={styles.closeBtn}
-                  onPress={onClose}
-                  disabled={isSubmitting}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Text style={[styles.closeIcon, isSubmitting && styles.closeDisabled]}>
-                    ✕
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Body */}
-              <ScrollView
-                style={styles.body}
-                contentContainerStyle={styles.bodyContent}
-                keyboardShouldPersistTaps="handled"
-              >
-                {children}
-              </ScrollView>
-            </KeyboardAvoidingView>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
+              <Text style={styles.closeBtnText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.content}>{children}</View>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };
@@ -89,49 +65,61 @@ export const BottomSheet = ({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: colors.overlay,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     justifyContent: 'flex-end',
   },
-  sheetContainer: {
+  sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxxl,
     maxHeight: '90%',
-    minHeight: 350,
-    borderWidth: 1,
-    borderColor: colors.border,
+  },
+  handleBar: {
+    width: 40,
+    height: 4,
+    backgroundColor: colors.borderStrong,
+    borderRadius: radius.pill,
+    alignSelf: 'center',
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+    alignItems: 'flex-start',
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  headerTextContainer: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
   title: {
     ...typography.subtitle,
     color: colors.textPrimary,
-    flex: 1,
+  },
+  subtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   closeBtn: {
-    padding: spacing.xs,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  closeIcon: {
-    fontSize: 16,
+  closeBtnText: {
+    fontSize: 14,
     color: colors.textSecondary,
     fontWeight: '700',
   },
-  closeDisabled: {
-    opacity: 0.3,
-  },
-  body: {
-    flex: 1,
-  },
-  bodyContent: {
-    padding: spacing.lg,
+  content: {
+    paddingTop: spacing.md,
   },
 });
-
-export default BottomSheet;

@@ -45,6 +45,18 @@ Staff accounts — both Admin and BDM.
 
 ---
 
+## 2.1 `lead_tags` (Junction Table)
+
+Allows multiple tags to be assigned to a single lead.
+
+| Field | Type | Notes |
+|---|---|---|
+| lead_id | uuid, PK, FK → leads.id | |
+| tag_id | uuid, PK, FK → tags.id | |
+| created_at | timestamptz | |
+
+---
+
 ## 3. `accounts`
 
 Represents a company CKR has sold or is selling to — enables upsell/resell tracking and per-company revenue rollup. Not a client of the ckr-mobile-project-process delivery pipeline; purely a CRM-side concept for this lead-tracking tool.
@@ -77,7 +89,6 @@ Represents a company CKR has sold or is selling to — enables upsell/resell tra
 | state | text | nullable — Indian state/UT, primarily used for School ERP leads |
 | source | enum('website','referral','cold_call','social_media','walk_in','meta_lead_ads','whatsapp_ads','other') | `meta_lead_ads`/`whatsapp_ads` reserved for Phase 2 |
 | campaign_ref | text | nullable — Meta/WhatsApp ad or form/campaign id (Phase 2) |
-| tag_id | uuid, FK → tags.id | |
 | sub_requirement | text | nullable |
 | deal_type | enum('new_business','upsell','resell') | default 'new_business' — requires `account_id` set for 'upsell'/'resell' |
 | assigned_to | uuid, FK → users.id | nullable (unassigned pool) |
@@ -111,6 +122,8 @@ Follow-up/interaction history — one lead has many.
 | lead_id | uuid, FK → leads.id | |
 | bdm_id | uuid, FK → users.id | who logged it |
 | type | enum('call','whatsapp','email','meeting','site_visit') | |
+| call_result | enum('connected','not_reachable','busy','invalid_number','switched_off') | nullable |
+| call_result_label | text | nullable |
 | notes | text | |
 | status_snapshot | text | lead status at time of log |
 | next_action | text | nullable |

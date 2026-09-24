@@ -1,155 +1,172 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { colors, radius, spacing, typography } from '../theme/index.js';
+import { colors } from '../theme/colors.js';
+import { typography } from '../theme/typography.js';
+import { spacing } from '../theme/spacing.js';
+import { radius } from '../theme/radius.js';
 
-export const BPF_STAGES = [
-  { id: 'new', label: '1. New', probability: 10 },
-  { id: 'contacted', label: '2. Contacted', probability: 25 },
-  { id: 'follow_up', label: '3. Follow-up', probability: 50 },
-  { id: 'proposal', label: '4. Proposal', probability: 75 },
-  { id: 'won', label: '5. Won', probability: 100 },
+const STAGES = [
+  { key: 'new', label: 'New' },
+  { key: 'contacted', label: 'Contacted' },
+  { key: 'follow_up', label: 'Follow-up' },
+  { key: 'proposal', label: 'Proposal' },
+  { key: 'won', label: 'Won' },
 ];
 
-/**
- * Business Process Flow (BPF) Chevron Stepper
- * Authentically styled per Microsoft Dynamics 365 / Fluent
- *
- * @param {object} props
- * @param {string} props.currentStatus
- * @param {(stageId: string) => void} [props.onSelectStage]
- * @param {boolean} [props.disabled=false]
- */
 export const ProcessFlowBar = ({
   currentStatus = 'new',
-  onSelectStage,
+  onSelectStage = null,
   disabled = false,
 }) => {
   const normStatus = (currentStatus || 'new').toLowerCase();
-  const currentIndex = BPF_STAGES.findIndex((s) => s.id === normStatus);
+  const currentIndex = STAGES.findIndex((s) => s.key === normStatus);
+  const activeIdx = currentIndex >= 0 ? currentIndex : 0;
   const isTerminalLost = normStatus === 'lost' || normStatus === 'invalid';
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {BPF_STAGES.map((stage, idx) => {
-          const isActive = stage.id === normStatus;
-          const isPassed = currentIndex > idx && !isTerminalLost;
-
-          let stageBg = colors.surfaceAlt;
-          let stageTextColor = colors.textSecondary;
-          let borderColor = colors.border;
-
-          if (isActive) {
-            stageBg = colors.primary;
-            stageTextColor = colors.textOnPrimary;
-            borderColor = colors.primary;
-          } else if (isPassed) {
-            stageBg = colors.primaryLight;
-            stageTextColor = colors.primary;
-            borderColor = '#C7E0F4';
-          }
-
-          return (
-            <TouchableOpacity
-              key={stage.id}
-              style={[
-                styles.stageButton,
-                { backgroundColor: stageBg, borderColor },
-                isActive && styles.activeStageButton,
-              ]}
-              onPress={() => {
-                if (!disabled && onSelectStage) {
-                  onSelectStage(stage.id);
-                }
-              }}
-              disabled={disabled || !onSelectStage}
-              activeOpacity={0.8}
-            >
-              <Text
-                style={[
-                  styles.stageText,
-                  { color: stageTextColor },
-                  isActive && styles.activeStageText,
-                ]}
-                numberOfLines={1}
-              >
-                {isPassed ? `✓ ${stage.label}` : stage.label}
-              </Text>
-              <Text
-                style={[
-                  styles.probText,
-                  { color: isActive ? '#D6ECFF' : colors.textSecondary },
-                ]}
-              >
-                {stage.probability}%
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
       {isTerminalLost ? (
         <View style={styles.lostBanner}>
-          <Text style={styles.lostBannerText}>
-            🛑 Lead status is marked as {normStatus.toUpperCase()}
+          <Text style={styles.lostText}>
+            STATUS: {normStatus.toUpperCase()} (Process Ended)
           </Text>
         </View>
-      ) : null}
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {STAGES.map((stage, idx) => {
+            const isCompleted = idx < activeIdx;
+            const isCurrent = idx === activeIdx;
+
+            return (
+              <TouchableOpacity
+                key={stage.key}
+                style={[
+                  styles.segment,
+                  isCurrent && styles.segmentCurrent,
+                  isCompleted && styles.segmentCompleted,
+                  idx > activeIdx && styles.segmentUpcoming,
+                ]}
+                disabled={disabled || !onSelectStage}
+                onPress={() => onSelectStage && onSelectStage(stage.key)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.circle}>
+                  <Text
+                    style={[
+                      styles.circleText,
+                      isCurrent && styles.circleTextCurrent,
+                      isCompleted && styles.circleTextCompleted,
+                    ]}
+                  >
+                    {isCompleted ? '✓' : idx + 1}
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.stageLabel,
+                    isCurrent && styles.stageLabelCurrent,
+                    isCompleted && styles.stageLabelCompleted,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {stage.label}
+                </Text>
+                {idx < STAGES.length - 1 ? (
+                  <Text style={styles.chevronDivider}>›</Text>
+                ) : null}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
     marginVertical: spacing.xs,
   },
   scrollContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
   },
-  stageButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: radius.xs,
-    borderWidth: 1,
-    minWidth: 100,
-    justifyContent: 'center',
+  segment: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.xs,
+    marginRight: 2,
   },
-  activeStageButton: {
-    borderWidth: 1.5,
+  segmentCurrent: {
+    backgroundColor: colors.primary,
   },
-  stageText: {
-    ...typography.captionBold,
-    fontSize: 11,
+  segmentCompleted: {
+    backgroundColor: colors.primaryLight,
   },
-  activeStageText: {
+  segmentUpcoming: {
+    opacity: 0.65,
+  },
+  circle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.xs,
+  },
+  circleText: {
+    fontSize: 10,
     fontWeight: '700',
+    color: colors.textSecondary,
   },
-  probText: {
-    ...typography.overline,
-    fontSize: 9,
-    marginTop: 1,
+  circleTextCurrent: {
+    color: colors.textOnPrimary,
+    backgroundColor: colors.primaryDark,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  circleTextCompleted: {
+    color: colors.primary,
+  },
+  stageLabel: {
+    ...typography.captionBold,
+    color: colors.textSecondary,
+  },
+  stageLabelCurrent: {
+    color: colors.textOnPrimary,
+  },
+  stageLabelCompleted: {
+    color: colors.primary,
+  },
+  chevronDivider: {
+    fontSize: 14,
+    color: colors.textDisabled,
+    marginLeft: spacing.xs,
   },
   lostBanner: {
     backgroundColor: colors.errorBg,
-    borderColor: '#F5C6CB',
+    borderColor: colors.errorBorder,
     borderWidth: 1,
-    borderRadius: radius.xs,
-    padding: spacing.xs,
-    marginTop: spacing.xs,
+    padding: spacing.sm,
+    borderRadius: radius.sm,
     alignItems: 'center',
   },
-  lostBannerText: {
+  lostText: {
     ...typography.captionBold,
-    color: colors.error,
+    color: colors.errorText,
   },
 });
-
-export default ProcessFlowBar;

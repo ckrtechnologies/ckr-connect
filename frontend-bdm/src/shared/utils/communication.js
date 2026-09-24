@@ -1,67 +1,57 @@
 import { Linking, Alert } from 'react-native';
-import { sanitizePhone } from './formatters.js';
 
 /**
- * Initiate mobile cellular phone call
- * @param {string} phone
- * @param {string} [name='Contact']
+ * Trigger Native Phone Dialer
  */
-export const makePhoneCall = async (phone, name = 'Contact') => {
+export const makePhoneCall = async (phone) => {
   if (!phone) {
-    Alert.alert('Missing Phone', `No phone number recorded for ${name}.`);
+    Alert.alert('Phone Missing', 'No phone number available for this contact.');
     return;
   }
-  const clean = sanitizePhone(phone);
-  const url = `tel:${clean}`;
+  const cleanPhone = String(phone).replace(/[^0-9+]/g, '');
+  const url = `tel:${cleanPhone}`;
   try {
     const supported = await Linking.canOpenURL(url);
     if (supported) {
       await Linking.openURL(url);
     } else {
-      Alert.alert('Dialer Unavailable', `Cannot initiate cellular call to ${phone} on this device.`);
+      Alert.alert('Not Supported', `Your device cannot dial ${phone} directly.`);
     }
   } catch (err) {
-    console.warn('[makePhoneCall] error:', err);
-    Alert.alert('Dialer Error', `Could not open dialer for ${phone}.`);
+    Alert.alert('Dialer Error', err.message || 'Could not launch cellular dialer.');
   }
 };
 
 /**
- * Open WhatsApp chat with contact
- * @param {string} phone
- * @param {string} [message='']
+ * Trigger WhatsApp Chat
  */
-export const openWhatsApp = async (phone, message = '') => {
+export const openWhatsApp = async (phone, defaultText = '') => {
   if (!phone) {
-    Alert.alert('Missing Phone', 'No phone number available for WhatsApp.');
+    Alert.alert('Phone Missing', 'No phone number available for WhatsApp.');
     return;
   }
-  const clean = phone.replace(/[^0-9]/g, '');
-  const encodedMsg = encodeURIComponent(message);
-  const url = `https://wa.me/${clean}${message ? `?text=${encodedMsg}` : ''}`;
+  const cleanPhone = String(phone).replace(/[^0-9]/g, '');
+  const textParam = defaultText ? `?text=${encodeURIComponent(defaultText)}` : '';
+  const url = `https://wa.me/${cleanPhone}${textParam}`;
   try {
     await Linking.openURL(url);
   } catch (err) {
-    console.warn('[openWhatsApp] error:', err);
-    Alert.alert('WhatsApp Error', 'Could not open WhatsApp. Ensure WhatsApp is installed.');
+    Alert.alert('WhatsApp Error', 'Could not open WhatsApp on this device.');
   }
 };
 
 /**
- * Open default email client
- * @param {string} email
- * @param {string} [subject='']
+ * Trigger Email Client
  */
-export const openEmail = async (email, subject = '') => {
+export const sendEmail = async (email, subject = '') => {
   if (!email) {
-    Alert.alert('Missing Email', 'No email address recorded.');
+    Alert.alert('Email Missing', 'No email address available.');
     return;
   }
   const url = `mailto:${email}${subject ? `?subject=${encodeURIComponent(subject)}` : ''}`;
   try {
     await Linking.openURL(url);
   } catch (err) {
-    console.warn('[openEmail] error:', err);
-    Alert.alert('Email Error', 'Could not open email application.');
+    Alert.alert('Email Error', 'Could not launch email app.');
   }
 };

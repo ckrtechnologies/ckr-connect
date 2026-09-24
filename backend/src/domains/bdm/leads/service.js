@@ -1,6 +1,15 @@
 import { bdmLeadsRepository } from './repository.js';
+import { adminLeadsService } from '../../admin/leads/service.js';
 
 export const bdmLeadsService = {
+  async createLead(bdmId, leadData) {
+    return await adminLeadsService.createLead({
+      ...leadData,
+      assigned_to: bdmId,
+      source: leadData.source || 'bdm_inbound'
+    }, bdmId);
+  },
+
   async listMyLeads(bdmId, queryParams) {
     const page = Math.max(1, parseInt(queryParams.page, 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(queryParams.limit, 10) || 25));

@@ -19,7 +19,7 @@ Each top-level nav item opens directly onto its primary grid/list screen; create
 |---|---|---|---|---|---|---|
 | A-01 | Login | Admin authentication | Direct URL | email, password | JWT | US-01 |
 | A-02 | Dashboard | Funnel, lead-status waterfall, leaderboard, attendance summary, overdue follow-ups, weighted pipeline value, won revenue | Site map → Dashboard (post-login landing) | date range filter | aggregated metrics, waterfall chart data, forecast/revenue figures | US-20, US-23, US-28 |
-| A-03 | Lead List (grid) | Browse/search/filter all leads, multi-select drives command bar (Assign, Bulk actions) | Site map → Leads | filters (status/tag/BDM/source/state/city/date), search | paginated lead rows | US-06 |
+| A-03 | Lead List (grid) | Browse/search/filter all leads, multi-select drives command bar (Assign, Manage Tags, Delete, Bulk actions, Export CSV) | Site map → Leads | filters (status/tags/BDM/source/state/city/date), search | paginated lead rows, CSV export | US-06, US-06b |
 | A-04 | Lead Detail (form) | View/edit lead; Business Process Flow bar at top; tabs (Summary/Details/Related); Timeline panel (interaction/assignment/status history) | From A-03 row click | lead edits | updated lead, history timelines, BPF stage | US-02, US-09 (view), US-24 |
 | A-05 | Quick Create — Lead | Fast single-lead creation (panel, per DESIGN.md §2.7) | "+ New" command on A-03 | lead fields | new lead row | US-02 |
 | A-06 | Bulk Upload (CSV) | Upload CSV, preview, validate, commit | "Bulk upload" command on A-03 | CSV file | insert summary, error report | US-03 |

@@ -1,25 +1,21 @@
 /**
- * Route Name Constants
+ * Centralized Route Name Constants
  */
 export const ROUTES = {
-  // Auth Flows
-  LOGIN: 'B01_Login',
-  ONBOARDING: 'B10_Onboarding',
+  // Auth
+  LOGIN: 'Login',
+  WALKTHROUGH: 'WelcomeWalkthrough',
 
-  // Main Tabs Shell
+  // Bottom Tabs
   MAIN_TABS: 'MainTabs',
+  WORKSPACE: 'Workspace',
+  MY_LEADS: 'MyLeads',
+  ATTENDANCE: 'Attendance',
+  NOTIFICATIONS: 'Notifications',
 
-  // Tab Screens
-  WORKSPACE: 'B02_Workspace',
-  MY_LEADS: 'B05_MyLeads',
-  ATTENDANCE_PUNCH: 'B03_AttendancePunch',
-  NOTIFICATIONS: 'B09_Notifications',
-
-  // Modal / Push Detail Screens
-  ATTENDANCE_HISTORY: 'B04_AttendanceHistory',
-  LEAD_DETAIL: 'B06_LeadDetail',
-  LOG_FOLLOWUP: 'B07_LogFollowup',
-  UPLOAD_BRD: 'B08_UploadBrd',
+  // Stack Details & Forms
+  LEAD_DETAIL: 'LeadDetail',
+  LOG_FOLLOWUP: 'LogFollowup',
+  UPLOAD_BRD: 'UploadBrd',
+  ATTENDANCE_HISTORY: 'AttendanceHistory',
 };
-
-export default ROUTES;

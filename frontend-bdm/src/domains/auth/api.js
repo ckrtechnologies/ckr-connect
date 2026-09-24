@@ -1,4 +1,4 @@
-import { baseApi } from '../../shared/store/api.js';
+import { baseApi } from '../../shared/store/baseApi.js';
 
 export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -9,14 +9,12 @@ export const authApi = baseApi.injectEndpoints({
         body: credentials,
       }),
     }),
-    markOnboardingSeen: builder.mutation({
-      query: () => ({
-        url: '/auth/onboarding-seen',
-        method: 'PATCH',
-      }),
+    getBootstrap: builder.query({
+      query: () => '/bootstrap',
+      providesTags: ['Bootstrap'],
     }),
   }),
+  overrideExisting: false,
 });
 
-export const { useLoginMutation, useMarkOnboardingSeenMutation } = authApi;
-export default authApi;
+export const { useLoginMutation, useGetBootstrapQuery } = authApi;

@@ -1,36 +1,40 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, radius, spacing, typography, shadows } from '../../../shared/theme/index.js';
+import { colors } from '../../../shared/theme/colors.js';
+import { typography } from '../../../shared/theme/typography.js';
+import { spacing } from '../../../shared/theme/spacing.js';
+import { radius } from '../../../shared/theme/radius.js';
+import { FluentCard } from '../../../shared/components/FluentCard.jsx';
 
 export const CallingTargetCard = ({
-  completedCount = 4,
-  dailyTarget = 15,
-  positiveCount = 3,
-  neutralCount = 1,
-  meetingCount = 1,
+  loggedCount = 0,
+  targetCount = 15,
+  positiveCount = 0,
+  neutralCount = 0,
+  demoCount = 0,
 }) => {
-  const remaining = Math.max(0, dailyTarget - completedCount);
-  const progressPercent = Math.min(100, Math.round((completedCount / dailyTarget) * 100));
+  const percent = Math.min(100, Math.round((loggedCount / targetCount) * 100));
+  const remaining = Math.max(0, targetCount - loggedCount);
 
   return (
-    <View style={styles.card}>
-      <View style={styles.topRow}>
+    <FluentCard style={styles.card}>
+      <View style={styles.header}>
         <Text style={styles.title}>DAILY CALLING TARGET & PERFORMANCE</Text>
-        <Text style={styles.percentText}>{progressPercent}% COMPLETED</Text>
+        <Text style={styles.percentText}>{percent}% COMPLETED</Text>
       </View>
 
-      <View style={styles.countRow}>
+      <View style={styles.statRow}>
         <Text style={styles.bigCount}>
-          {completedCount}{' '}
-          <Text style={styles.smallCount}>/ {dailyTarget} Calls Logged Today</Text>
+          {loggedCount}{' '}
+          <Text style={styles.targetLabel}>/ {targetCount} Calls Logged Today</Text>
         </Text>
         <Text
           style={[
             styles.remainingText,
-            { color: progressPercent >= 50 ? colors.success : colors.urgentAmber },
+            { color: percent >= 50 ? colors.success : colors.warning },
           ]}
         >
-          {remaining} more to target
+          {remaining > 0 ? `${remaining} more to target` : '🎯 Target Met!'}
         </Text>
       </View>
 
@@ -40,128 +44,109 @@ export const CallingTargetCard = ({
           style={[
             styles.progressFill,
             {
-              width: `${progressPercent}%`,
-              backgroundColor: progressPercent >= 80 ? colors.success : colors.primary,
+              width: `${percent}%`,
+              backgroundColor: percent >= 80 ? colors.success : colors.primary,
             },
           ]}
         />
       </View>
 
-      {/* Summary Pills Breakdown */}
-      <View style={styles.pillsContainer}>
-        <Text style={styles.summaryLabel}>TODAY'S CALL RESULTS SUMMARY:</Text>
+      {/* Outcome Breakdown Pills */}
+      <View style={styles.outcomesContainer}>
+        <Text style={styles.outcomeTitle}>TODAY'S CALL RESULTS SUMMARY:</Text>
         <View style={styles.pillsRow}>
           <View style={[styles.pill, styles.positivePill]}>
-            <Text style={[styles.pillText, { color: colors.success }]}>
-              🟢 {positiveCount} Positive / Next Step Set
+            <Text style={[styles.pillText, { color: colors.successText }]}>
+              🟢 {positiveCount} Positive / Next Step
             </Text>
           </View>
-
           <View style={[styles.pill, styles.neutralPill]}>
-            <Text style={[styles.pillText, { color: colors.urgentAmberText }]}>
+            <Text style={[styles.pillText, { color: colors.warningText }]}>
               🟡 {neutralCount} Ringing / No Answer
             </Text>
           </View>
-
           <View style={[styles.pill, styles.demoPill]}>
             <Text style={[styles.pillText, { color: '#0369A1' }]}>
-              👥 {meetingCount} Demo Completed
+              👥 {demoCount} Demo Completed
             </Text>
           </View>
         </View>
       </View>
-    </View>
+    </FluentCard>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderTopColor: colors.primary,
     borderTopWidth: 3,
-    borderRadius: radius.md,
-    padding: spacing.cardPadding,
-    marginVertical: spacing.xs,
-    ...shadows.level1,
+    borderTopColor: colors.primary,
+    marginBottom: spacing.md,
   },
-  topRow: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: spacing.xs,
   },
   title: {
     ...typography.overline,
-    fontSize: 10,
     color: colors.textSecondary,
-    fontWeight: '700',
-    letterSpacing: 0.5,
   },
   percentText: {
-    ...typography.captionBold,
-    fontSize: 10,
+    ...typography.overline,
     color: colors.primary,
-    fontWeight: '700',
   },
-  countRow: {
+  statRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
-    marginTop: spacing.xs,
+    marginVertical: spacing.xs,
   },
   bigCount: {
-    fontSize: 20,
+    ...typography.title,
     fontWeight: '700',
     color: colors.textPrimary,
   },
-  smallCount: {
+  targetLabel: {
     ...typography.caption,
-    fontSize: 12,
     color: colors.textSecondary,
     fontWeight: '400',
   },
   remainingText: {
     ...typography.captionBold,
-    fontSize: 11,
   },
   progressTrack: {
     height: 8,
     backgroundColor: colors.surfaceAlt,
     borderRadius: radius.pill,
     overflow: 'hidden',
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
   },
   progressFill: {
     height: '100%',
     borderRadius: radius.pill,
   },
-  pillsContainer: {
-    marginTop: spacing.sm,
-    paddingTop: spacing.xs,
+  outcomesContainer: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    paddingTop: spacing.sm,
   },
-  summaryLabel: {
+  outcomeTitle: {
     ...typography.overline,
-    fontSize: 10,
     color: colors.textSecondary,
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   pillsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: spacing.xs,
   },
   pill: {
-    paddingHorizontal: 7,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 3,
-    borderRadius: radius.xs,
+    borderRadius: radius.pill,
     borderWidth: 1,
-  },
-  pillText: {
-    ...typography.captionBold,
-    fontSize: 10,
   },
   positivePill: {
     backgroundColor: colors.successBg,
@@ -169,12 +154,14 @@ const styles = StyleSheet.create({
   },
   neutralPill: {
     backgroundColor: colors.warningBg,
-    borderColor: colors.urgentAmberBorder,
+    borderColor: colors.warningBorder,
   },
   demoPill: {
     backgroundColor: '#F0F9FF',
-    borderColor: '#BAE6FD',
+    borderColor: '#0284C7',
+  },
+  pillText: {
+    ...typography.captionBold,
+    fontSize: 10,
   },
 });
-
-export default CallingTargetCard;

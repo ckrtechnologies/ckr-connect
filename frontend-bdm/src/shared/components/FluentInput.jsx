@@ -1,72 +1,58 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
-import { colors, radius, spacing, typography } from '../theme/index.js';
+import { colors } from '../theme/colors.js';
+import { typography } from '../theme/typography.js';
+import { spacing } from '../theme/spacing.js';
+import { radius } from '../theme/radius.js';
 
-/**
- * Fluent 2 Input Field
- *
- * @param {object} props
- * @param {string} [props.label]
- * @param {boolean} [props.required=false]
- * @param {string} [props.error]
- * @param {string} [props.helperText]
- * @param {boolean} [props.multiline=false]
- * @param {object} [props.containerStyle]
- * @param {object} [props.inputStyle]
- */
 export const FluentInput = ({
   label,
+  value,
+  onChangeText,
+  placeholder,
   required = false,
-  error,
-  helperText,
+  error = null,
+  secureTextEntry = false,
+  keyboardType = 'default',
+  autoCapitalize = 'none',
   multiline = false,
-  containerStyle,
-  inputStyle,
-  onFocus,
-  onBlur,
-  ...rest
+  numberOfLines = 1,
+  editable = true,
+  style = null,
+  inputStyle = null,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
 
-  const handleFocus = (e) => {
-    setIsFocused(true);
-    if (onFocus) onFocus(e);
-  };
-
-  const handleBlur = (e) => {
-    setIsFocused(false);
-    if (onBlur) onBlur(e);
-  };
-
   return (
-    <View style={[styles.container, containerStyle]}>
+    <View style={[styles.container, style]}>
       {label ? (
         <Text style={styles.label}>
-          {label}
-          {required ? <Text style={styles.requiredAsterisk}> *</Text> : null}
+          {label} {required ? <Text style={styles.requiredMark}>*</Text> : null}
         </Text>
       ) : null}
-
       <TextInput
         style={[
           styles.input,
-          multiline && styles.inputMultiline,
+          multiline ? styles.multilineInput : styles.singlelineInput,
           isFocused && styles.inputFocused,
-          error ? styles.inputError : null,
+          Boolean(error) && styles.inputError,
+          !editable && styles.inputDisabled,
           inputStyle,
         ]}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
         placeholderTextColor={colors.textDisabled}
+        secureTextEntry={secureTextEntry}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
         multiline={multiline}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        {...rest}
+        numberOfLines={multiline ? numberOfLines : 1}
+        editable={editable}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
       />
-
-      {error ? (
-        <Text style={styles.errorText}>{error}</Text>
-      ) : helperText ? (
-        <Text style={styles.helperText}>{helperText}</Text>
-      ) : null}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 };
@@ -74,50 +60,49 @@ export const FluentInput = ({
 const styles = StyleSheet.create({
   container: {
     marginBottom: spacing.md,
+    width: '100%',
   },
   label: {
-    ...typography.bodyBold,
-    fontSize: 12,
+    ...typography.captionBold,
     color: colors.textSecondary,
     marginBottom: spacing.xs,
   },
-  requiredAsterisk: {
+  requiredMark: {
     color: colors.error,
-    fontWeight: '700',
   },
   input: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
     borderWidth: 1,
+    borderColor: colors.borderStrong,
     borderRadius: radius.sm,
     paddingHorizontal: spacing.md,
-    height: 40,
     ...typography.body,
     color: colors.textPrimary,
   },
-  inputMultiline: {
-    height: 80,
-    paddingVertical: spacing.sm,
+  singlelineInput: {
+    height: 44,
+  },
+  multilineInput: {
+    minHeight: 88,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
     textAlignVertical: 'top',
   },
   inputFocused: {
     borderColor: colors.primary,
-    borderWidth: 1.5,
+    borderWidth: 2,
   },
   inputError: {
     borderColor: colors.error,
     borderWidth: 1.5,
+  },
+  inputDisabled: {
+    backgroundColor: colors.surfaceAlt,
+    color: colors.textDisabled,
   },
   errorText: {
     ...typography.caption,
     color: colors.error,
     marginTop: spacing.xs,
   },
-  helperText: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
 });
-
-export default FluentInput;

@@ -11,6 +11,15 @@ export const bdmLeadsController = {
     }
   },
 
+  async createLead(req, res, next) {
+    try {
+      const data = await bdmLeadsService.createLead(req.user.id, req.body);
+      return successResponse(res, data, 'Lead created successfully', 201);
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async getMyLeadById(req, res, next) {
     try {
       const { id } = req.params;

@@ -120,10 +120,15 @@ export default function LeadsPage() {
   // Selection handlers
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedIds(new Set(filteredLeads.map((l) => l.id)));
+      // Select only current page
+      setSelectedIds(new Set(paginatedLeads.map((l) => l.id)));
     } else {
       setSelectedIds(new Set());
     }
+  };
+
+  const handleSelectAllFiltered = () => {
+    setSelectedIds(new Set(filteredLeads.map((l) => l.id)));
   };
 
   const handleSelectOne = (id) => {
@@ -151,6 +156,8 @@ export default function LeadsPage() {
   };
 
   const allSelected = filteredLeads.length > 0 && selectedIds.size === filteredLeads.length;
+  const pageSelected = paginatedLeads.length > 0 && paginatedLeads.every((l) => selectedIds.has(l.id));
+  const allFilteredSelected = filteredLeads.length > 0 && selectedIds.size === filteredLeads.length;
 
   return (
     <>
@@ -243,6 +250,18 @@ export default function LeadsPage() {
                 <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z" />
               </svg>
               Bulk Import
+            </button>
+
+            <button
+              className="fluent-btn-command"
+              id="cmd-export-csv"
+              onClick={handleExportCsv}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style={{ verticalAlign: 'text-bottom', marginRight: '4px' }}>
+                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
+                <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z" />
+              </svg>
+              Export CSV
             </button>
           </div>
         </div>
@@ -413,7 +432,7 @@ export default function LeadsPage() {
                     <input
                       type="checkbox"
                       className="fluent-checkbox"
-                      checked={allSelected}
+                      checked={pageSelected}
                       onChange={(e) => handleSelectAll(e.target.checked)}
                     />
                   </th>
@@ -429,6 +448,40 @@ export default function LeadsPage() {
                   <th style={{ width: '48px', textAlign: 'center' }}>Action</th>
                 </tr>
               </thead>
+              {pageSelected && selectedIds.size > 0 && (
+                <tbody>
+                  <tr>
+                    <td colSpan="11" style={{
+                      textAlign: 'center',
+                      padding: '8px 16px',
+                      background: 'rgba(0, 120, 212, 0.08)',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      borderBottom: '1px solid var(--color-border)',
+                    }}>
+                      {allFilteredSelected ? (
+                        <>
+                          ✅ All <strong>{filteredLeads.length}</strong> leads selected.{' '}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedIds(new Set())}
+                            style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline', fontSize: '13px' }}
+                          >Clear selection</button>
+                        </>
+                      ) : (
+                        <>
+                          ☑️ <strong>{selectedIds.size}</strong> leads on this page selected.{' '}
+                          <button
+                            type="button"
+                            onClick={handleSelectAllFiltered}
+                            style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline', fontSize: '13px' }}
+                          >Select all {filteredLeads.length} leads</button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                </tbody>
+              )}
               <tbody>
                 {filteredLeads.length === 0 ? (
                   <tr>

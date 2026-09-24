@@ -1,60 +1,75 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
-  ScrollView,
   StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
-import { colors, radius, spacing, typography, shadows } from '../../../shared/theme/index.js';
-import {
-  StatusBadge,
-  ProcessFlowBar,
-  FluentButton,
-  FluentCard,
-  WaterfallNode,
-} from '../../../shared/components/index.js';
-import {
-  setWonModalLeadId,
-  setDropoffModalData,
-} from '../../../shared/store/slices/uiSlice.js';
-import {
-  INITIAL_LEADS,
-  INITIAL_INTERACTIONS,
-} from '../../../shared/utils/mockSeedData.js';
+import { colors } from '../../../shared/theme/colors.js';
+import { typography } from '../../../shared/theme/typography.js';
+import { spacing } from '../../../shared/theme/spacing.js';
+import { radius } from '../../../shared/theme/radius.js';
+import { FluentCard } from '../../../shared/components/FluentCard.jsx';
+import { StatusBadge } from '../../../shared/components/StatusBadge.jsx';
+import { ProcessFlowBar } from '../../../shared/components/ProcessFlowBar.jsx';
+import { FluentButton } from '../../../shared/components/FluentButton.jsx';
+import { LeadSpecsTable } from '../components/LeadSpecsTable.jsx';
+import { WaterfallNode } from '../../../shared/components/WaterfallNode.jsx';
+import { useGetLeadDetailQuery, useUpdateLeadStatusMutation } from '../api.js';
+import { openWonModal, openDropoffModal } from '../../../shared/store/uiSlice.js';
 import { formatCurrency } from '../../../shared/utils/formatters.js';
-import {
-  makePhoneCall,
-  openWhatsApp,
-  openEmail,
-} from '../../../shared/utils/communication.js';
+import { makePhoneCall, openWhatsApp, sendEmail } from '../../../shared/utils/communication.js';
 import { ROUTES } from '../../../shared/navigation/routes.js';
-import LeadSpecsTable from '../components/LeadSpecsTable.jsx';
-import WonModal from '../components/WonModal.jsx';
-import DropoffModal from '../components/DropoffModal.jsx';
 
 export const LeadDetailScreen = ({ route, navigation }) => {
+  const { leadId } = route.params;
   const dispatch = useDispatch();
-  const leadId = route.params?.leadId || 'lead-101';
 
-  // Seed / local state for this lead
-  const initialLead = INITIAL_LEADS.find((l) => l.id === leadId) || INITIAL_LEADS[0];
-  const [lead, setLead] = useState(initialLead);
+  const { data: lead, isLoading, refetch } = useGetLeadDetailQuery(leadId);
+  const [updateStatus, { isLoading: isUpdatingStatus }] = useUpdateLeadStatusMutation();
 
-  const [interactions, setInteractions] = useState(
-    INITIAL_INTERACTIONS.filter((i) => i.lead_id === lead.id)
-  );
+  if (isLoading || !lead) {
+    return (
+      <SafeAreaView style={styles.centerContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Loading lead specifications...</Text>
+      </SafeAreaView>
+    );
+  }
 
-  const isWon = (lead.status || '').toUpperCase() === 'WON';
-  const isOverdue = lead.id === 'lead-102';
-  const isDueToday = lead.id === 'lead-101' || lead.id === 'lead-110';
-  const isUntouched = (lead.status || '').toUpperCase() === 'NEW' || lead.followup_count === 0;
+  const isWon = (lead.status || '').toLowerCase() === 'won';
+  const isUntouched = (lead.status || '').toLowerCase() === 'new' || lead.followup_count === 0;
+  const interactions = lead.interactions || [];
+
+  const handleStageChange = async (newStage) => {
+    if (newStage === 'won') {
+      dispatch(openWonModal(lead.id));
+      return;
+    }
+    if (newStage === 'lost' || newStage === 'invalid') {
+      dispatch(openDropoffModal({ leadId: lead.id, defaultStage: newStage }));
+      return;
+    }
+
+    try {
+      await updateStatus({
+        id: lead.id,
+        status: newStage,
+      }).unwrap();
+      Alert.alert('Stage Advanced', `Opportunity moved to ${newStage.toUpperCase()}.`);
+      refetch();
+    } catch (err) {
+      Alert.alert('Update Failed', err?.data?.message || 'Could not advance stage.');
+    }
+  };
 
   const probability =
-    lead.probability_override ||
-    (lead.status === 'won'
+    lead.status === 'won'
       ? 100
       : lead.status === 'proposal'
       ? 75
@@ -62,207 +77,128 @@ export const LeadDetailScreen = ({ route, navigation }) => {
       ? 50
       : lead.status === 'contacted'
       ? 25
-      : 10);
-
-  // Status transitions
-  const handleStageSelect = (stageId) => {
-    if (stageId === 'won') {
-      dispatch(setWonModalLeadId(lead.id));
-      return;
-    }
-    setLead((prev) => ({
-      ...prev,
-      status: stageId,
-      probability_override:
-        stageId === 'proposal'
-          ? 75
-          : stageId === 'follow_up'
-          ? 50
-          : stageId === 'contacted'
-          ? 25
-          : 10,
-    }));
-  };
-
-  const handleConfirmWon = (targetLeadId, wonData) => {
-    setLead((prev) => ({
-      ...prev,
-      status: 'won',
-      won_amount: wonData.won_amount,
-      deal_type: wonData.deal_type,
-      company_name: wonData.account_name || prev.company_name,
-    }));
-
-    // Add winning interaction to timeline
-    const wonInteraction = {
-      id: `int-${Date.now()}`,
-      lead_id: lead.id,
-      bdm_id: 'u-02',
-      type: 'meeting',
-      call_result_type: 'positive',
-      call_result_label: 'Deal Closed as Won',
-      notes: `Won revenue recorded: ₹${wonData.won_amount.toLocaleString('en-IN')}. ${wonData.notes || ''}`,
-      created_at: new Date().toISOString(),
-    };
-    setInteractions([wonInteraction, ...interactions]);
-  };
-
-  const handleConfirmDropoff = (targetLeadId, dropoffData) => {
-    setLead((prev) => ({
-      ...prev,
-      status: dropoffData.status,
-      lost_reason: dropoffData.status === 'lost' ? dropoffData.reason : null,
-      invalid_reason: dropoffData.status === 'invalid' ? dropoffData.reason : null,
-    }));
-  };
+      : 10;
 
   return (
-    <View style={styles.container}>
-      {/* Detail Header Bar */}
-      <View style={styles.topNavHeader}>
+    <SafeAreaView style={styles.container}>
+      {/* Header Bar */}
+      <View style={styles.headerBar}>
         <TouchableOpacity
-          style={styles.backBtn}
           onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
+          style={styles.backBtn}
+          activeOpacity={0.7}
         >
-          <Text style={styles.backBtnText}>‹ My Leads</Text>
+          <Text style={styles.backText}>‹ My Leads</Text>
         </TouchableOpacity>
-
-        <Text style={styles.navTitle}>LEAD PROFILE</Text>
-
+        <Text style={styles.headerBarTitle}>LEAD PROFILE</Text>
         <StatusBadge status={lead.status} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* 1. Key Entity Header Card */}
         <FluentCard
-          topBorderColor={
-            isWon
-              ? colors.success
-              : isOverdue
-              ? colors.error
-              : isDueToday
-              ? colors.urgentAmber
-              : isUntouched
-              ? colors.urgentAmber
-              : colors.primary
-          }
-          style={styles.entityCard}
+          style={[
+            styles.entityCard,
+            isWon && styles.cardWon,
+            isUntouched && styles.cardUntouched,
+          ]}
         >
-          <View style={styles.entityTopRow}>
-            <View>
-              <View style={styles.titleWithBadge}>
-                <Text style={styles.contactName}>{lead.name}</Text>
-                {isUntouched ? (
-                  <View style={styles.untouchedTag}>
-                    <Text style={styles.untouchedTagText}>⚡ Untouched</Text>
-                  </View>
-                ) : null}
-              </View>
-              <Text style={styles.companySubtext}>
-                🏢 {lead.company_name}{' '}
-                {lead.city ? `· 📍 ${lead.city}, ${lead.state || 'India'}` : ''}
-              </Text>
+          <View style={styles.nameHeader}>
+            <View style={styles.nameRow}>
+              <Text style={styles.leadName}>{lead.name}</Text>
+              {isUntouched ? (
+                <View style={styles.untouchedTag}>
+                  <Text style={styles.untouchedTagText}>⚡ Untouched</Text>
+                </View>
+              ) : null}
             </View>
+            <Text style={styles.companySub}>
+              🏢 {lead.company_name || 'Individual'} {lead.city ? `· 📍 ${lead.city}, ${lead.state || ''}` : ''}
+            </Text>
           </View>
 
-          {/* Deal Highlight Metrics Bar */}
-          <View style={styles.metricsBar}>
+          {/* Deal Highlight Box */}
+          <View style={styles.metricsBox}>
             <View>
-              <Text style={styles.metricLabel}>Forecast Value</Text>
+              <Text style={styles.metricLabel}>FORECAST VALUE</Text>
               <Text style={styles.metricValue}>
                 {formatCurrency(lead.expected_value || lead.budget || 0)}
               </Text>
             </View>
-            <View style={{ alignItems: 'flex-end' }}>
+            <View style={styles.rightMetricCol}>
               <View
                 style={[
-                  styles.priorityTag,
-                  lead.priority === 'high' ? styles.highPriority : styles.medPriority,
+                  styles.priorityBadge,
+                  lead.priority === 'high' ? styles.priorityHigh : styles.priorityMed,
                 ]}
               >
                 <Text
                   style={[
-                    styles.priorityTagText,
-                    lead.priority === 'high' ? { color: colors.error } : { color: colors.primary },
+                    styles.priorityText,
+                    lead.priority === 'high' ? styles.priorityHighText : styles.priorityMedText,
                   ]}
                 >
                   {(lead.priority || 'medium').toUpperCase()} PRIORITY
                 </Text>
               </View>
-              <Text style={styles.prioritySubtext}>
+              <Text style={styles.dealTypeSub}>
                 {lead.deal_type === 'new_business' ? 'New Business' : 'Upsell'} · {probability}% Win
               </Text>
             </View>
           </View>
 
-          {/* Direct Communication Touch Targets */}
-          <View style={styles.contactActionsRow}>
+          {/* Direct Communication Touch Targets (US-06) */}
+          <View style={styles.contactRow}>
             <TouchableOpacity
               style={[styles.contactBtn, styles.callBtn]}
-              onPress={() => makePhoneCall(lead.phone, lead.name)}
+              onPress={() => makePhoneCall(lead.phone)}
               activeOpacity={0.8}
             >
-              <Text style={styles.contactIcon}>📞</Text>
-              <Text style={[styles.contactBtnText, { color: '#FFFFFF' }]}>Call Now</Text>
+              <Text style={styles.contactBtnIcon}>📞</Text>
+              <Text style={[styles.contactBtnText, styles.callBtnText]}>Call Now</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.contactBtn, styles.waBtn]}
-              onPress={() =>
-                openWhatsApp(
-                  lead.phone,
-                  `Hello ${lead.name}, this is Aarav Sharma from CKR Technologies.`
-                )
-              }
+              onPress={() => openWhatsApp(lead.phone, `Hi ${lead.name}, regarding your requirement.`)}
               activeOpacity={0.8}
             >
-              <Text style={styles.contactIcon}>💬</Text>
-              <Text style={[styles.contactBtnText, { color: '#FFFFFF' }]}>WhatsApp</Text>
+              <Text style={styles.contactBtnIcon}>💬</Text>
+              <Text style={[styles.contactBtnText, styles.waBtnText]}>WhatsApp</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.contactBtn, styles.emailBtn]}
-              onPress={() => openEmail(lead.email, 'CKR Technologies Product Inquiry')}
+              style={styles.contactBtn}
+              onPress={() => sendEmail(lead.email, `CKR Technologies — Discussion with ${lead.name}`)}
               activeOpacity={0.8}
             >
-              <Text style={styles.contactIcon}>✉️</Text>
-              <Text style={styles.contactBtnText}>Send Email</Text>
+              <Text style={styles.contactBtnIcon}>✉️</Text>
+              <Text style={styles.contactBtnText}>Email</Text>
             </TouchableOpacity>
           </View>
         </FluentCard>
 
-        {/* 2. Pipeline Progress Stepper (BPF Bar) */}
-        <FluentCard style={styles.bpfCard}>
-          <View style={styles.bpfHeaderRow}>
-            <Text style={styles.sectionHeading}>Pipeline Progress</Text>
-            <TouchableOpacity
-              onPress={() =>
-                dispatch(
-                  setDropoffModalData({
-                    leadId: lead.id,
-                    defaultStage: 'lost',
-                  })
-                )
-              }
-            >
-              <Text style={styles.dropoffActionText}>Mark Lost / Invalid ›</Text>
-            </TouchableOpacity>
+        {/* 2. Pipeline Progress Stepper (BPF) */}
+        <FluentCard>
+          <View style={styles.bpfHeader}>
+            <Text style={styles.bpfTitle}>Pipeline Progress</Text>
+            <Text style={styles.bpfSubtitle}>Tap chevron to advance stage</Text>
           </View>
-
           <ProcessFlowBar
             currentStatus={lead.status}
-            onSelectStage={handleStageSelect}
+            onSelectStage={handleStageChange}
+            disabled={isUpdatingStatus}
           />
         </FluentCard>
 
-        {/* 3. Primary Actions */}
-        <View style={styles.actionButtonGroup}>
+        {/* 3. Primary Actions Bar */}
+        <View style={styles.actionsBar}>
           {!isWon ? (
             <FluentButton
-              variant="success"
               title="🏆 Close Deal as Won"
-              onPress={() => dispatch(setWonModalLeadId(lead.id))}
+              onPress={() => dispatch(openWonModal(lead.id))}
+              variant="success"
+              size="large"
               style={styles.wonBtn}
             />
           ) : (
@@ -273,317 +209,334 @@ export const LeadDetailScreen = ({ route, navigation }) => {
             </View>
           )}
 
-          <View style={styles.dualActionsRow}>
+          <View style={styles.subActionsRow}>
             <FluentButton
-              variant="primary"
               title="+ Log Activity"
-              onPress={() =>
-                navigation.navigate(ROUTES.LOG_FOLLOWUP, { leadId: lead.id })
-              }
-              style={{ flex: 1 }}
+              onPress={() => navigation.navigate(ROUTES.LOG_FOLLOWUP, { leadId: lead.id, leadName: lead.name, companyName: lead.company_name })}
+              variant="primary"
+              size="medium"
+              style={styles.actionBtnHalf}
             />
             <FluentButton
-              variant="secondary"
               title="📎 Scope BRD"
-              onPress={() =>
-                navigation.navigate(ROUTES.UPLOAD_BRD, { leadId: lead.id })
-              }
-              style={{ flex: 1 }}
+              onPress={() => navigation.navigate(ROUTES.UPLOAD_BRD, { leadId: lead.id, currentBrd: lead.brd_url })}
+              variant="secondary"
+              size="medium"
+              style={styles.actionBtnHalf}
             />
           </View>
         </View>
 
-        {/* 4. Full Lead Specifications */}
-        <FluentCard style={styles.specsCard}>
-          <View style={styles.specsHeaderRow}>
-            <Text style={styles.sectionHeading}>📋 Full Lead Specifications</Text>
-            <Text style={styles.idBadge}>ID: #{lead.id}</Text>
+        {/* 4. Full Lead Specifications (Specs Table) */}
+        <FluentCard>
+          <View style={styles.specsHeader}>
+            <Text style={styles.specsTitle}>📋 Full Lead Specifications</Text>
+            <Text style={styles.specsId}>ID: #{lead.id}</Text>
           </View>
 
-          {/* Requirement & Scope Callout */}
           {lead.sub_requirement ? (
             <View style={styles.scopeCallout}>
-              <Text style={styles.scopeCalloutHeader}>REQUIREMENT & SCOPE:</Text>
-              <Text style={styles.scopeCalloutBody}>"{lead.sub_requirement}"</Text>
+              <Text style={styles.scopeCalloutLabel}>REQUIREMENT & SCOPE:</Text>
+              <Text style={styles.scopeCalloutText}>"{lead.sub_requirement}"</Text>
             </View>
           ) : null}
 
-          {/* Detailed Key-Value Table */}
           <LeadSpecsTable lead={lead} interactionCount={interactions.length} />
 
-          {/* BRD Scope Document Section */}
+          {/* BRD Document Status */}
           <View style={styles.brdSection}>
             <Text style={styles.brdHeader}>ATTACHED SCOPE DOCUMENT (BRD)</Text>
             {lead.brd_url ? (
-              <View style={styles.brdItem}>
-                <Text style={{ fontSize: 20 }}>📄</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.brdFilename}>{lead.brd_url.split('/').pop()}</Text>
-                  <Text style={styles.brdFilesize}>BRD Scope Attached · 2.4 MB PDF</Text>
+              <View style={styles.brdAttachedBox}>
+                <Text style={styles.brdDocIcon}>📄</Text>
+                <View style={styles.brdInfo}>
+                  <Text style={styles.brdFileName} numberOfLines={1}>
+                    {lead.brd_url.split('/').pop()}
+                  </Text>
+                  <Text style={styles.brdSub}>BRD Scope Attached · PDF/DOCX</Text>
                 </View>
-                <TouchableOpacity
-                  style={styles.brdViewBtn}
-                  onPress={() =>
-                    Alert.alert('Scope Document', `Previewing ${lead.brd_url.split('/').pop()}`)
-                  }
-                >
-                  <Text style={styles.brdViewBtnText}>View</Text>
-                </TouchableOpacity>
               </View>
             ) : (
-              <View style={styles.brdEmptyBox}>
+              <TouchableOpacity
+                style={styles.brdEmptyBox}
+                onPress={() => navigation.navigate(ROUTES.UPLOAD_BRD, { leadId: lead.id })}
+              >
                 <Text style={styles.brdEmptyText}>📎 No scope document uploaded yet</Text>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate(ROUTES.UPLOAD_BRD, { leadId: lead.id })}
-                >
-                  <Text style={styles.brdUploadLink}>+ Upload BRD</Text>
-                </TouchableOpacity>
-              </View>
+                <Text style={styles.uploadPrompt}>+ Upload BRD</Text>
+              </TouchableOpacity>
             )}
           </View>
         </FluentCard>
 
-        {/* 5. Interaction Waterfall History Feed */}
-        <FluentCard style={styles.waterfallCard}>
+        {/* 5. Interaction Waterfall History */}
+        <FluentCard>
           <View style={styles.waterfallHeader}>
             <View>
-              <Text style={styles.sectionHeading}>🌊 Interaction Waterfall History</Text>
-              <Text style={styles.waterfallSubtext}>
-                {interactions.length + 1} milestones recorded
+              <Text style={styles.waterfallTitle}>🌊 Interaction Waterfall History</Text>
+              <Text style={styles.waterfallSubtitle}>
+                {interactions.length + 1} milestone{interactions.length === 0 ? '' : 's'} recorded
               </Text>
             </View>
-
-            <TouchableOpacity
-              style={styles.waterfallAddBtn}
-              onPress={() => navigation.navigate(ROUTES.LOG_FOLLOWUP, { leadId: lead.id })}
-            >
-              <Text style={styles.waterfallAddBtnText}>+ Log Activity</Text>
-            </TouchableOpacity>
+            <FluentButton
+              title="+ Log Activity"
+              onPress={() => navigation.navigate(ROUTES.LOG_FOLLOWUP, { leadId: lead.id, leadName: lead.name, companyName: lead.company_name })}
+              variant="secondary"
+              size="small"
+            />
           </View>
 
-          <View style={styles.waterfallTimelineContainer}>
-            {interactions.map((int) => (
-              <WaterfallNode key={int.id} interaction={int} />
+          <View style={styles.waterfallList}>
+            {interactions.map((int, idx) => (
+              <WaterfallNode
+                key={int.id || idx}
+                item={int}
+                isLast={false}
+              />
             ))}
 
-            {/* Genesis Inbound Node */}
-            <WaterfallNode interaction={lead} isGenesis />
+            {/* Genesis Inbound Lead Node */}
+            <WaterfallNode
+              item={{
+                type: 'inbound',
+                bdm_name: lead.assigned_bdm_name || 'System Auto-Capture',
+                created_at: lead.created_at,
+                notes: `Lead captured via ${lead.source || 'Website Inbound'} and assigned to ${lead.assigned_bdm_name || 'Aarav Sharma'}.`,
+              }}
+              isLast={true}
+              isGenesis={true}
+            />
           </View>
         </FluentCard>
       </ScrollView>
-
-      {/* Won & Dropoff Modals */}
-      <WonModal lead={lead} onConfirmWon={handleConfirmWon} />
-      <DropoffModal onConfirmDropoff={handleConfirmDropoff} />
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.canvas,
   },
-  topNavHeader: {
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.canvas,
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+  },
+  headerBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.pagePaddingHorizontal,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
   },
   backBtn: {
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
   },
-  backBtnText: {
+  backText: {
     ...typography.bodyBold,
     color: colors.primary,
-    fontSize: 13,
   },
-  navTitle: {
+  headerBarTitle: {
     ...typography.overline,
     color: colors.textSecondary,
-    fontSize: 11,
-    letterSpacing: 0.5,
   },
   scrollContent: {
-    padding: spacing.pagePaddingHorizontal,
-    paddingTop: spacing.sm,
-    paddingBottom: 40,
-    gap: 12,
+    padding: spacing.md,
+    paddingBottom: spacing.huge,
   },
   entityCard: {
-    padding: 14,
+    borderTopWidth: 3,
+    borderTopColor: colors.primary,
   },
-  entityTopRow: {
-    marginBottom: spacing.xs,
+  cardWon: {
+    borderTopColor: colors.success,
   },
-  titleWithBadge: {
+  cardUntouched: {
+    borderTopColor: '#D97706',
+  },
+  nameHeader: {
+    marginBottom: spacing.sm,
+  },
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
     flexWrap: 'wrap',
   },
-  contactName: {
+  leadName: {
     ...typography.title,
-    fontSize: 17,
     color: colors.textPrimary,
   },
   untouchedTag: {
-    backgroundColor: '#FFF4CE',
-    borderColor: '#F2C94C',
+    backgroundColor: colors.untouchedBg,
+    borderColor: colors.untouchedBorder,
     borderWidth: 1,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 1,
     borderRadius: radius.xs,
+    marginLeft: spacing.xs,
   },
   untouchedTagText: {
     ...typography.overline,
-    color: '#78350F',
-    fontSize: 10,
-    fontWeight: '700',
+    color: colors.untouchedText,
+    fontSize: 9,
   },
-  companySubtext: {
-    ...typography.body,
-    fontSize: 13,
+  companySub: {
+    ...typography.caption,
     color: colors.textSecondary,
     marginTop: 2,
   },
-  metricsBar: {
+  metricsBox: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: colors.surfaceAlt,
-    padding: 10,
+    padding: spacing.sm,
     borderRadius: radius.sm,
-    marginVertical: spacing.xs,
+    marginBottom: spacing.md,
   },
   metricLabel: {
     ...typography.overline,
     color: colors.textSecondary,
-    fontSize: 10,
+    fontSize: 9,
   },
   metricValue: {
-    ...typography.bodyBold,
-    fontSize: 16,
+    ...typography.title,
     color: colors.primary,
+    fontWeight: '700',
   },
-  priorityTag: {
-    paddingHorizontal: 6,
+  rightMetricCol: {
+    alignItems: 'flex-end',
+  },
+  priorityBadge: {
+    paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: radius.xs,
     borderWidth: 1,
   },
-  highPriority: {
-    backgroundColor: colors.errorBg,
-    borderColor: '#F7B5B9',
+  priorityHigh: {
+    backgroundColor: colors.priorityHighBg,
+    borderColor: colors.priorityHighBorder,
   },
-  medPriority: {
-    backgroundColor: colors.primaryLight,
-    borderColor: '#C7E0F4',
+  priorityHighText: {
+    color: colors.priorityHighText,
   },
-  priorityTagText: {
+  priorityMed: {
+    backgroundColor: colors.priorityMediumBg,
+    borderColor: colors.priorityMediumBorder,
+  },
+  priorityMedText: {
+    color: colors.priorityMediumText,
+  },
+  priorityText: {
     ...typography.overline,
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 9,
   },
-  prioritySubtext: {
+  dealTypeSub: {
     ...typography.caption,
-    fontSize: 11,
     color: colors.textSecondary,
+    fontSize: 10,
     marginTop: 2,
   },
-  contactActionsRow: {
+  contactRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: spacing.xs,
+    gap: spacing.xs,
   },
   contactBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 8,
-    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.sm,
+    height: 40,
   },
   callBtn: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
+    borderColor: '#C7E0F4',
+  },
+  callBtnText: {
+    color: colors.primary,
   },
   waBtn: {
-    backgroundColor: colors.whatsapp,
-    borderColor: colors.whatsapp,
+    backgroundColor: colors.successBg,
+    borderColor: '#C3E6CB',
   },
-  emailBtn: {
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
+  waBtnText: {
+    color: colors.successText,
   },
-  contactIcon: {
-    fontSize: 13,
+  contactBtnIcon: {
+    fontSize: 14,
+    marginRight: 4,
   },
   contactBtnText: {
     ...typography.captionBold,
-    fontSize: 11,
     color: colors.textPrimary,
   },
-  bpfCard: {
-    padding: 12,
-  },
-  bpfHeaderRow: {
+  bpfHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
-  sectionHeading: {
+  bpfTitle: {
     ...typography.captionBold,
-    fontSize: 13,
     color: colors.textPrimary,
   },
-  dropoffActionText: {
-    ...typography.captionBold,
+  bpfSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
     fontSize: 11,
-    color: colors.error,
   },
-  actionButtonGroup: {
-    gap: 8,
+  actionsBar: {
+    marginBottom: spacing.md,
   },
   wonBtn: {
-    height: 44,
+    marginBottom: spacing.sm,
+    minHeight: 44,
   },
   wonBanner: {
     backgroundColor: colors.successBg,
     borderColor: colors.success,
     borderWidth: 1,
     borderRadius: radius.sm,
-    padding: 12,
+    padding: spacing.md,
     alignItems: 'center',
+    marginBottom: spacing.sm,
   },
   wonBannerText: {
     ...typography.bodyBold,
     color: colors.success,
-    fontSize: 14,
   },
-  dualActionsRow: {
+  subActionsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
   },
-  specsCard: {
-    padding: 14,
+  actionBtnHalf: {
+    flex: 1,
   },
-  specsHeaderRow: {
+  specsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.xs,
   },
-  idBadge: {
+  specsTitle: {
+    ...typography.subtitle,
+    color: colors.textPrimary,
+  },
+  specsId: {
     ...typography.caption,
-    fontSize: 11,
     color: colors.textSecondary,
     fontFamily: 'monospace',
   },
@@ -591,118 +544,93 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F9FD',
     borderLeftWidth: 3,
     borderLeftColor: colors.primary,
+    padding: spacing.sm,
     borderRadius: radius.xs,
-    padding: 10,
     marginVertical: spacing.xs,
   },
-  scopeCalloutHeader: {
+  scopeCalloutLabel: {
     ...typography.overline,
     color: colors.primary,
     fontSize: 10,
-    fontWeight: '700',
     marginBottom: 2,
   },
-  scopeCalloutBody: {
+  scopeCalloutText: {
     ...typography.caption,
     color: colors.textPrimary,
     lineHeight: 18,
   },
   brdSection: {
-    marginTop: spacing.sm,
-    paddingTop: spacing.xs,
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
   brdHeader: {
     ...typography.overline,
-    fontSize: 10,
     color: colors.textSecondary,
-    marginBottom: 6,
+    marginBottom: spacing.xs,
   },
-  brdItem: {
+  brdAttachedBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
     backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
-    borderWidth: 1,
+    padding: spacing.sm,
     borderRadius: radius.sm,
-    padding: 10,
-  },
-  brdFilename: {
-    ...typography.captionBold,
-    fontSize: 12,
-    color: colors.textPrimary,
-  },
-  brdFilesize: {
-    ...typography.caption,
-    fontSize: 10,
-    color: colors.textSecondary,
-  },
-  brdViewBtn: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: radius.xs,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderColor: colors.border,
   },
-  brdViewBtnText: {
-    ...typography.captionBold,
-    fontSize: 11,
+  brdDocIcon: {
+    fontSize: 22,
+    marginRight: spacing.sm,
+  },
+  brdInfo: {
+    flex: 1,
+  },
+  brdFileName: {
+    ...typography.bodyBold,
     color: colors.textPrimary,
+    fontSize: 12,
+  },
+  brdSub: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontSize: 10,
   },
   brdEmptyBox: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
+    padding: spacing.sm,
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderRadius: radius.sm,
-    padding: 10,
+    borderColor: colors.borderStrong,
   },
   brdEmptyText: {
     ...typography.caption,
-    fontSize: 11,
     color: colors.textSecondary,
   },
-  brdUploadLink: {
+  uploadPrompt: {
     ...typography.captionBold,
-    fontSize: 11,
     color: colors.primary,
-  },
-  waterfallCard: {
-    padding: 14,
   },
   waterfallHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
-  waterfallSubtext: {
-    ...typography.caption,
-    fontSize: 11,
-    color: colors.textSecondary,
-  },
-  waterfallAddBtn: {
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.xs,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  waterfallAddBtnText: {
-    ...typography.captionBold,
-    fontSize: 11,
+  waterfallTitle: {
+    ...typography.subtitle,
     color: colors.textPrimary,
   },
-  waterfallTimelineContainer: {
+  waterfallSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  waterfallList: {
     marginTop: spacing.xs,
   },
 });
-
-export default LeadDetailScreen;

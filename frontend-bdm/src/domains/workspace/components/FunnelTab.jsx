@@ -1,64 +1,69 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, radius, spacing, typography, shadows } from '../../../shared/theme/index.js';
-import { FluentCard, FluentButton, StatusBadge } from '../../../shared/components/index.js';
+import { colors } from '../../../shared/theme/colors.js';
+import { typography } from '../../../shared/theme/typography.js';
+import { spacing } from '../../../shared/theme/spacing.js';
+import { FluentCard } from '../../../shared/components/FluentCard.jsx';
+import { StatusBadge } from '../../../shared/components/StatusBadge.jsx';
+import { FluentButton } from '../../../shared/components/FluentButton.jsx';
+import { formatLakhs } from '../../../shared/utils/formatters.js';
 
-export const FunnelTab = ({ onOpenLead }) => {
+export const FunnelTab = ({
+  stageCounts = {},
+  overdueLeads = [],
+  onOpenLead,
+}) => {
+  const overdueLead = overdueLeads[0];
+
   return (
     <View style={styles.container}>
-      {/* Quick Status Hero Card */}
-      <View style={styles.heroCard}>
-        <Text style={styles.heroLabel}>PUNCH STATUS: TODAY</Text>
-        <Text style={styles.heroTitle}>Checked In · 09:28 AM</Text>
-        <Text style={styles.heroSubtitle}>2 Follow-ups Due Today · 2 Untouched</Text>
-      </View>
+      {/* Overdue Urgent Alert Card */}
+      {overdueLead ? (
+        <FluentCard style={styles.urgentCard}>
+          <View style={styles.urgentHeader}>
+            <Text style={styles.urgentLabel}>Action Required · Overdue</Text>
+            <StatusBadge status="warning" label="Overdue" />
+          </View>
+          <Text style={styles.leadName}>
+            {overdueLead.name} ({overdueLead.company_name || 'Individual'})
+          </Text>
+          <FluentButton
+            title="Open Lead & Log Call ›"
+            onPress={() => onOpenLead(overdueLead.id)}
+            variant="secondary"
+            size="small"
+            style={styles.openBtn}
+          />
+        </FluentCard>
+      ) : null}
 
-      {/* Urgent Leads Alert Card */}
-      <FluentCard leftBorderColor={colors.urgentAmber} style={styles.urgentCard}>
-        <View style={styles.urgentHeader}>
-          <Text style={styles.urgentTitle}>Due Today</Text>
-          <StatusBadge status="negotiation" label="Action Required" />
-        </View>
-        <Text style={styles.urgentLeadName}>Dr. Rajeshwar Rao (Heritage Valley)</Text>
-        <FluentButton
-          variant="secondary"
-          size="sm"
-          title="Open Lead & Log Call ›"
-          onPress={() => onOpenLead('lead-101')}
-          style={styles.urgentBtn}
-        />
-      </FluentCard>
-
-      {/* Pipeline Stage Breakdown */}
-      <FluentCard style={styles.pipelineCard}>
-        <Text style={styles.sectionHeader}>My Active Pipeline</Text>
-
-        <View style={styles.stageRows}>
-          <View style={styles.row}>
-            <Text style={styles.stageLabel}>New / Untouched (₹8.0L)</Text>
-            <Text style={[styles.stageValue, { color: colors.urgentAmberDark }]}>
-              2 leads
+      {/* Stage Breakdown Card */}
+      <FluentCard>
+        <Text style={styles.cardTitle}>My Active Pipeline</Text>
+        <View style={styles.stagesList}>
+          <View style={styles.stageRow}>
+            <Text style={styles.stageName}>New / Untouched</Text>
+            <Text style={[styles.stageValue, { color: colors.warning }]}>
+              {stageCounts.new || 0} leads
             </Text>
           </View>
-
-          <View style={styles.row}>
-            <Text style={styles.stageLabel}>Proposal (₹10.3L expected)</Text>
-            <Text style={styles.stageValue}>2 leads</Text>
+          <View style={styles.stageRow}>
+            <Text style={styles.stageName}>Contacted</Text>
+            <Text style={styles.stageValue}>{stageCounts.contacted || 0} leads</Text>
           </View>
-
-          <View style={styles.row}>
-            <Text style={styles.stageLabel}>Follow-up (₹6.0L expected)</Text>
-            <Text style={styles.stageValue}>2 leads</Text>
+          <View style={styles.stageRow}>
+            <Text style={styles.stageName}>Follow-up</Text>
+            <Text style={styles.stageValue}>{stageCounts.follow_up || 0} leads</Text>
           </View>
-
-          <View style={styles.row}>
-            <Text style={styles.stageLabel}>Contacted (₹2.6L expected)</Text>
-            <Text style={styles.stageValue}>1 lead</Text>
+          <View style={styles.stageRow}>
+            <Text style={styles.stageName}>Proposal</Text>
+            <Text style={styles.stageValue}>{stageCounts.proposal || 0} leads</Text>
           </View>
-
-          <View style={[styles.row, styles.wonRow]}>
-            <Text style={styles.wonLabel}>Won Revenue</Text>
-            <Text style={styles.wonValue}>₹4,50,000</Text>
+          <View style={[styles.stageRow, styles.wonRow]}>
+            <Text style={styles.stageNameWon}>Won Revenue</Text>
+            <Text style={styles.stageValueWon}>
+              {formatLakhs(stageCounts.wonRevenue || 0, 2)}
+            </Text>
           </View>
         </View>
       </FluentCard>
@@ -68,73 +73,47 @@ export const FunnelTab = ({ onOpenLead }) => {
 
 const styles = StyleSheet.create({
   container: {
-    gap: 12,
-  },
-  heroCard: {
-    backgroundColor: '#004578',
-    borderRadius: radius.md,
-    padding: spacing.md,
-    ...shadows.level1,
-  },
-  heroLabel: {
-    ...typography.overline,
-    color: '#D6ECFF',
-    fontSize: 10,
-  },
-  heroTitle: {
-    ...typography.title,
-    color: '#FFFFFF',
-    marginVertical: 2,
-    fontSize: 18,
-  },
-  heroSubtitle: {
-    ...typography.caption,
-    color: '#D6ECFF',
-    fontSize: 11,
+    paddingVertical: spacing.xs,
   },
   urgentCard: {
-    padding: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.warning,
   },
   urgentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: spacing.xs,
   },
-  urgentTitle: {
+  urgentLabel: {
+    ...typography.captionBold,
+    color: colors.textPrimary,
+  },
+  leadName: {
     ...typography.bodyBold,
     color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
-  urgentLeadName: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginTop: 4,
-    fontSize: 13,
+  openBtn: {
+    alignSelf: 'flex-start',
   },
-  urgentBtn: {
-    marginTop: 8,
-  },
-  pipelineCard: {
-    padding: 12,
-  },
-  sectionHeader: {
+  cardTitle: {
     ...typography.subtitle,
     color: colors.textPrimary,
-    marginBottom: 8,
-    fontSize: 14,
+    marginBottom: spacing.md,
   },
-  stageRows: {
-    gap: 8,
+  stagesList: {
+    gap: spacing.sm,
   },
-  row: {
+  stageRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 2,
+    paddingVertical: spacing.xs,
   },
-  stageLabel: {
+  stageName: {
     ...typography.body,
     color: colors.textPrimary,
-    fontSize: 13,
   },
   stageValue: {
     ...typography.bodyBold,
@@ -143,17 +122,16 @@ const styles = StyleSheet.create({
   wonRow: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    paddingTop: 6,
-    marginTop: 2,
+    paddingTop: spacing.sm,
+    marginTop: spacing.xs,
   },
-  wonLabel: {
+  stageNameWon: {
     ...typography.bodyBold,
-    color: colors.textPrimary,
+    color: colors.successText,
   },
-  wonValue: {
+  stageValueWon: {
     ...typography.bodyBold,
-    color: colors.success,
+    color: colors.successText,
+    fontSize: 16,
   },
 });
-
-export default FunnelTab;

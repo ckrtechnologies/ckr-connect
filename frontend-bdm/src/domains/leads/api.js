@@ -1,4 +1,4 @@
-import { baseApi } from '../../shared/store/api.js';
+import { baseApi } from '../../shared/store/baseApi.js';
 
 export const leadsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -9,29 +9,28 @@ export const leadsApi = baseApi.injectEndpoints({
       }),
       providesTags: ['Leads'],
     }),
-    getMyLeadById: builder.query({
+    getLeadDetail: builder.query({
       query: (id) => `/bdm/leads/${id}`,
       providesTags: (result, error, id) => [{ type: 'Lead', id }],
     }),
-    updateLeadStatus: builder.mutation({
-      query: ({ id, ...body }) => ({
-        url: `/bdm/leads/${id}/status`,
-        method: 'PATCH',
-        body,
-      }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Lead', id }, 'Leads', 'Workspace'],
-    }),
-    logInteraction: builder.mutation({
+    createBdmLead: builder.mutation({
       query: (body) => ({
-        url: '/bdm/interactions',
+        url: '/bdm/leads',
         method: 'POST',
         body,
       }),
-      invalidatesTags: (result, error, { lead_id }) => [
-        { type: 'Lead', id: lead_id },
+      invalidatesTags: ['Leads', 'Dashboard'],
+    }),
+    updateLeadStatus: builder.mutation({
+      query: ({ id, status, remarks, lost_reason, invalid_reason, won_amount }) => ({
+        url: `/bdm/leads/${id}/status`,
+        method: 'PATCH',
+        body: { status, remarks, lost_reason, invalid_reason, won_amount },
+      }),
+      invalidatesTags: (result, error, { id }) => [
         'Leads',
-        'Interactions',
-        'Workspace',
+        'Dashboard',
+        { type: 'Lead', id },
       ],
     }),
     uploadBrd: builder.mutation({
@@ -40,17 +39,30 @@ export const leadsApi = baseApi.injectEndpoints({
         method: 'POST',
         body: formData,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Lead', id }, 'Leads'],
+      invalidatesTags: (result, error, { id }) => [{ type: 'Lead', id }],
+    }),
+    logInteraction: builder.mutation({
+      query: (body) => ({
+        url: '/bdm/interactions',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (result, error, { lead_id }) => [
+        'Interactions',
+        'Dashboard',
+        'Leads',
+        { type: 'Lead', id: lead_id },
+      ],
     }),
   }),
+  overrideExisting: false,
 });
 
 export const {
   useGetMyLeadsQuery,
-  useGetMyLeadByIdQuery,
+  useGetLeadDetailQuery,
+  useCreateBdmLeadMutation,
   useUpdateLeadStatusMutation,
-  useLogInteractionMutation,
   useUploadBrdMutation,
+  useLogInteractionMutation,
 } = leadsApi;
-
-export default leadsApi;
