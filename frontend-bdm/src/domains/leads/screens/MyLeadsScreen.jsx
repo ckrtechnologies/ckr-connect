@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,11 +19,13 @@ import { FluentButton } from '../../../shared/components/FluentButton.jsx';
 import { FilterChip } from '../../../shared/components/FilterChip.jsx';
 import { EmptyState } from '../../../shared/components/EmptyState.jsx';
 import { LeadCardItem } from '../components/LeadCardItem.jsx';
+import { LeadFilterBottomSheet } from '../components/LeadFilterBottomSheet.jsx';
 import { useGetMyLeadsQuery } from '../api.js';
 import {
   setSearchQuery,
   setUrgencyFilter,
   setStageFilter,
+  setAllFilters,
   resetFilters,
 } from '../slice.js';
 import { setQuickAddModalOpen } from '../../../shared/store/uiSlice.js';
@@ -31,41 +33,134 @@ import { ROUTES } from '../../../shared/navigation/routes.js';
 
 export const MyLeadsScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
-  const { searchQuery, urgencyFilter, stageFilter } = useSelector((state) => state.leads);
+  const { searchQuery, urgencyFilter, stageFilter, priorityFilter, sortFilter } = useSelector(
+    (state) => state.leads
+  );
 
-  // Allow setting initial stage from route params (e.g. from Dashboard matrix click)
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+
+  // Sync initial stage from route params (e.g. from Dashboard matrix click)
   useEffect(() => {
     if (route.params?.stageFilter) {
       dispatch(setStageFilter(route.params.stageFilter));
     }
   }, [route.params?.stageFilter]);
 
+  const [page, setPage] = useState(1);
+  const LIMIT = 100;
+
+  // Determine sort_by and sort_order from sortFilter
+  const sortConfig = useMemo(() => {
+    switch (sortFilter) {
+      case 'created_asc':
+        return { sort_by: 'created_at', sort_order: 'ASC' };
+      case 'value_desc':
+        return { sort_by: 'expected_value', sort_order: 'DESC' };
+      case 'value_asc':
+        return { sort_by: 'expected_value', sort_order: 'ASC' };
+      case 'created_desc':
+      default:
+        return { sort_by: 'created_at', sort_order: 'DESC' };
+    }
+  }, [sortFilter]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, stageFilter, urgencyFilter, priorityFilter, sortFilter]);
+
   const { data: leadsData, isLoading, refetch, isFetching } = useGetMyLeadsQuery({
-    search: searchQuery || undefined,
-    status: stageFilter !== 'all' ? stageFilter.toLowerCase() : undefined,
+    search: searchQuery?.trim() || undefined,
+    status: stageFilter !== 'all' ? stageFilter : undefined,
+    urgency: urgencyFilter !== 'all' ? urgencyFilter : undefined,
+    priority: priorityFilter !== 'all' ? priorityFilter : undefined,
+    sort_by: sortConfig.sort_by,
+    sort_order: sortConfig.sort_order,
+    limit: LIMIT,
+    page,
   });
 
   const rawLeads = leadsData?.items || [];
+  const totalLeads = leadsData?.pagination?.total || 0;
+  
+  const handleLoadMore = () => {
+    if (leadsData?.pagination && page < leadsData.pagination.totalPages && !isFetching) {
+      setPage(prev => prev + 1);
+    }
+  };
 
-  // Filter client-side by urgency chips
-  const filteredLeads = rawLeads.filter((l) => {
-    const isUntouched = (l.status || '').toLowerCase() === 'new' || l.followup_count === 0;
-    const isWon = (l.status || '').toLowerCase() === 'won';
-    const isOverdue = l.is_overdue || (l.next_followup_date && new Date(l.next_followup_date) < new Date());
-    const isDueToday = l.is_due_today;
+  // Client-side fallback matching including wildcard support
+  const filteredLeads = useMemo(() => {
+    return rawLeads.filter((l) => {
+      // 1. Wildcard search matching (handles '*' and substring)
+      if (searchQuery && searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const searchableText = `${l.name || ''} ${l.company_name || ''} ${l.phone || ''} ${
+          l.email || ''
+        } ${l.city || ''} ${l.sub_requirement || ''}`.toLowerCase();
 
-    if (urgencyFilter === 'overdue') return isOverdue;
-    if (urgencyFilter === 'today') return isDueToday;
-    if (urgencyFilter === 'won') return isWon;
+        if (q.includes('*')) {
+          const parts = q.split('*').filter(Boolean);
+          const matchesAll = parts.every((part) => searchableText.includes(part));
+          if (!matchesAll) return false;
+        } else {
+          if (!searchableText.includes(q)) return false;
+        }
+      }
 
-    if (stageFilter === 'NEW') return isUntouched;
-    return true;
-  });
+      // 2. Stage filter
+      if (stageFilter && stageFilter !== 'all') {
+        const leadStatus = (l.status || '').toLowerCase().replace(/-/g, '_');
+        if (stageFilter === 'new') {
+          if (leadStatus !== 'new' || l.followup_count > 0) return false;
+        } else if (stageFilter === 'follow_up') {
+          if (leadStatus !== 'follow_up' && !l.next_followup_date) return false;
+        } else if (leadStatus !== stageFilter) {
+          return false;
+        }
+      }
 
-  const hasActiveFilters = searchQuery !== '' || urgencyFilter !== 'all' || stageFilter !== 'all';
+      // 3. Urgency filter
+      if (urgencyFilter && urgencyFilter !== 'all') {
+        const isWon = (l.status || '').toLowerCase() === 'won';
+        const isOverdue =
+          Boolean(l.is_overdue) ||
+          (l.next_followup_date && new Date(l.next_followup_date) < new Date());
+        const isDueToday = Boolean(l.is_due_today);
+
+        if (urgencyFilter === 'overdue' && !isOverdue) return false;
+        if (urgencyFilter === 'today' && !isDueToday) return false;
+        if (urgencyFilter === 'won' && !isWon) return false;
+      }
+
+      // 4. Priority filter
+      if (priorityFilter && priorityFilter !== 'all') {
+        if ((l.priority || '').toLowerCase() !== priorityFilter) return false;
+      }
+
+      return true;
+    });
+  }, [rawLeads, searchQuery, stageFilter, urgencyFilter, priorityFilter]);
+
+  const activeFiltersCount = [
+    stageFilter !== 'all',
+    urgencyFilter !== 'all',
+    priorityFilter !== 'all',
+    sortFilter !== 'created_desc',
+  ].filter(Boolean).length;
+
+  const hasActiveFilters = searchQuery !== '' || activeFiltersCount > 0;
 
   const handleOpenLead = (leadId) => {
     navigation.navigate(ROUTES.LEAD_DETAIL, { leadId });
+  };
+
+  const handleApplyFilters = (filters) => {
+    dispatch(setAllFilters(filters));
+  };
+
+  const handleResetFilters = () => {
+    dispatch(resetFilters());
   };
 
   return (
@@ -75,7 +170,7 @@ export const MyLeadsScreen = ({ navigation, route }) => {
         <View style={styles.titleRow}>
           <Text style={styles.title}>My Pipeline</Text>
           <Text style={styles.subtitle}>
-            ({rawLeads.length} leads assigned)
+            ({totalLeads} leads assigned)
           </Text>
         </View>
         <FluentButton
@@ -87,59 +182,54 @@ export const MyLeadsScreen = ({ navigation, route }) => {
         />
       </View>
 
-      {/* Search Input Box */}
-      <View style={styles.searchBox}>
-        <Text style={styles.searchIcon}>🔍</Text>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search school, contact, phone, city..."
-          placeholderTextColor={colors.textDisabled}
-          value={searchQuery}
-          onChangeText={(txt) => dispatch(setSearchQuery(txt))}
-        />
-        {searchQuery ? (
-          <TouchableOpacity
-            onPress={() => dispatch(setSearchQuery(''))}
-            style={styles.clearBtn}
+      {/* Search Input Box & Filter Button Row */}
+      <View style={styles.searchRow}>
+        <View style={styles.searchBox}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search school, phone, city, *wildcard..."
+            placeholderTextColor={colors.textDisabled}
+            value={searchQuery}
+            onChangeText={(txt) => dispatch(setSearchQuery(txt))}
+            autoCapitalize="none"
+            returnKeyType="search"
+            blurOnSubmit={false}
+          />
+          {searchQuery ? (
+            <TouchableOpacity
+              onPress={() => dispatch(setSearchQuery(''))}
+              style={styles.clearBtn}
+            >
+              <Text style={styles.clearBtnText}>✕</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        {/* Dedicated 2-Column Bottom Sheet Trigger */}
+        <TouchableOpacity
+          style={[
+            styles.filterTriggerBtn,
+            activeFiltersCount > 0 && styles.filterTriggerBtnActive,
+          ]}
+          onPress={() => setIsFilterModalOpen(true)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.filterTriggerIcon}>⚡</Text>
+          <Text
+            style={[
+              styles.filterTriggerText,
+              activeFiltersCount > 0 && styles.filterTriggerTextActive,
+            ]}
           >
-            <Text style={styles.clearBtnText}>✕</Text>
-          </TouchableOpacity>
-        ) : null}
+            Filter {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Urgency Filter Chips (Horizontal Scrolling) */}
+      {/* Quick Stage Filter Chips (Horizontal Scrolling) */}
       <View style={styles.chipsScrollWrapper}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-          <FilterChip
-            label="All"
-            active={urgencyFilter === 'all'}
-            onPress={() => dispatch(setUrgencyFilter('all'))}
-            badge={rawLeads.length}
-          />
-          <FilterChip
-            label="🚨 Overdue"
-            variant="error"
-            active={urgencyFilter === 'overdue'}
-            onPress={() => dispatch(setUrgencyFilter('overdue'))}
-          />
-          <FilterChip
-            label="⏰ Due Today"
-            variant="warning"
-            active={urgencyFilter === 'today'}
-            onPress={() => dispatch(setUrgencyFilter('today'))}
-          />
-          <FilterChip
-            label="🏆 Won"
-            variant="success"
-            active={urgencyFilter === 'won'}
-            onPress={() => dispatch(setUrgencyFilter('won'))}
-          />
-        </ScrollView>
-      </View>
-
-      {/* Stage Filter Chips (Horizontal Scrolling) */}
-      <View style={styles.chipsScrollWrapper}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+        <View style={styles.chipsRow}>
           <FilterChip
             label="All Stages"
             active={stageFilter === 'all'}
@@ -147,40 +237,40 @@ export const MyLeadsScreen = ({ navigation, route }) => {
           />
           <FilterChip
             label="⚡ Untouched"
-            active={stageFilter === 'NEW'}
-            onPress={() => dispatch(setStageFilter('NEW'))}
-          />
-          <FilterChip
-            label="Follow-up"
-            active={stageFilter === 'FOLLOW_UP'}
-            onPress={() => dispatch(setStageFilter('FOLLOW_UP'))}
-          />
-          <FilterChip
-            label="Proposal"
-            active={stageFilter === 'PROPOSAL'}
-            onPress={() => dispatch(setStageFilter('PROPOSAL'))}
+            active={stageFilter === 'new'}
+            onPress={() => dispatch(setStageFilter('new'))}
           />
           <FilterChip
             label="Contacted"
-            active={stageFilter === 'CONTACTED'}
-            onPress={() => dispatch(setStageFilter('CONTACTED'))}
+            active={stageFilter === 'contacted'}
+            onPress={() => dispatch(setStageFilter('contacted'))}
+          />
+          <FilterChip
+            label="Follow-up"
+            active={stageFilter === 'follow_up'}
+            onPress={() => dispatch(setStageFilter('follow_up'))}
+          />
+          <FilterChip
+            label="Proposal"
+            active={stageFilter === 'proposal'}
+            onPress={() => dispatch(setStageFilter('proposal'))}
           />
           <FilterChip
             label="Won"
-            active={stageFilter === 'WON'}
-            onPress={() => dispatch(setStageFilter('WON'))}
+            active={stageFilter === 'won'}
+            onPress={() => dispatch(setStageFilter('won'))}
           />
-        </ScrollView>
+        </View>
       </View>
 
-      {/* Counter & Reset action */}
+      {/* Counter & Reset Action */}
       <View style={styles.metaRow}>
         <Text style={styles.counterText}>
-          Showing <Text style={styles.counterBold}>{filteredLeads.length}</Text> of {rawLeads.length} leads
+          Showing <Text style={styles.counterBold}>{filteredLeads.length}</Text> of {totalLeads} leads
         </Text>
         {hasActiveFilters ? (
-          <TouchableOpacity onPress={() => dispatch(resetFilters())}>
-            <Text style={styles.resetText}>Reset Filters</Text>
+          <TouchableOpacity onPress={handleResetFilters}>
+            <Text style={styles.resetText}>Reset All</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -190,8 +280,20 @@ export const MyLeadsScreen = ({ navigation, route }) => {
         data={filteredLeads}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.listContent}
-        onRefresh={refetch}
-        refreshing={isFetching}
+        onRefresh={() => {
+          setPage(1);
+          refetch();
+        }}
+        refreshing={isFetching && page === 1}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          isFetching && page > 1 ? (
+            <ActivityIndicator size="small" color={colors.primary} style={{ margin: spacing.md }} />
+          ) : null
+        }
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         renderItem={({ item }) => (
           <LeadCardItem
             lead={item}
@@ -200,16 +302,45 @@ export const MyLeadsScreen = ({ navigation, route }) => {
         )}
         ListEmptyComponent={
           isLoading ? (
-            <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+            <ActivityIndicator
+              size="large"
+              color={colors.primary}
+              style={styles.loader}
+            />
           ) : (
             <EmptyState
-              title="No matching leads"
-              message="Try adjusting your search terms or active filter chips."
-              actionLabel="Clear All Filters"
-              onAction={() => dispatch(resetFilters())}
+              icon="🔍"
+              title="No Leads Found"
+              subtitle={
+                hasActiveFilters
+                  ? 'No leads match your active filters or wildcard search. Try resetting filters.'
+                  : 'You do not have any leads in this pipeline stage.'
+              }
+              actionTitle={hasActiveFilters ? 'Clear Filters' : '+ Add New Lead'}
+              onActionPress={() => {
+                if (hasActiveFilters) {
+                  handleResetFilters();
+                } else {
+                  dispatch(setQuickAddModalOpen(true));
+                }
+              }}
             />
           )
         }
+      />
+
+      {/* Dedicated 2-Column Bottom Sheet Filter Panel */}
+      <LeadFilterBottomSheet
+        visible={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        activeFilters={{
+          stage: stageFilter,
+          urgency: urgencyFilter,
+          priority: priorityFilter,
+          sort: sortFilter,
+        }}
+        onApply={handleApplyFilters}
+        onReset={handleResetFilters}
       />
     </SafeAreaView>
   );
@@ -233,31 +364,37 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
+    gap: spacing.xs,
   },
   title: {
-    ...typography.subtitle,
+    ...typography.title,
     color: colors.textPrimary,
   },
   subtitle: {
     ...typography.caption,
     color: colors.textSecondary,
-    marginLeft: spacing.xs,
   },
   addLeadBtn: {
-    minHeight: 28,
-    borderRadius: radius.pill,
+    minWidth: 90,
   },
-  searchBox: {
+  searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.sm,
-    marginHorizontal: spacing.md,
-    marginTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  searchBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.sm,
     height: 40,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   searchIcon: {
     fontSize: 14,
@@ -265,30 +402,63 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    height: '100%',
     ...typography.body,
     color: colors.textPrimary,
+    paddingVertical: 0,
+    height: '100%',
   },
   clearBtn: {
     padding: spacing.xs,
   },
   clearBtnText: {
-    fontSize: 12,
     color: colors.textSecondary,
+    fontSize: 14,
+  },
+  filterTriggerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 40,
+    paddingHorizontal: spacing.sm + 2,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 4,
+  },
+  filterTriggerBtnActive: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
+  },
+  filterTriggerIcon: {
+    fontSize: 14,
+  },
+  filterTriggerText: {
+    ...typography.captionBold,
+    color: colors.textSecondary,
+    fontSize: 12,
+  },
+  filterTriggerTextActive: {
+    color: colors.primaryDark,
+    fontWeight: '700',
   },
   chipsScrollWrapper: {
-    marginTop: spacing.xs,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingVertical: spacing.xs + 2,
   },
   chipsRow: {
     paddingHorizontal: spacing.md,
-    paddingVertical: 2,
+    gap: spacing.xs,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.xs + 2,
   },
   counterText: {
     ...typography.caption,
@@ -303,8 +473,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   listContent: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.xs,
+    padding: spacing.md,
     paddingBottom: spacing.xxxl,
   },
   loader: {

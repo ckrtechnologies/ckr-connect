@@ -303,6 +303,14 @@ export const adminLeadsRepository = {
       }
     }
 
+    if (data.tag_ids !== undefined) {
+      await db.query('DELETE FROM connect.lead_tags WHERE lead_id = $1', [id]);
+      const tagIds = Array.isArray(data.tag_ids) ? data.tag_ids : (data.tag_ids ? [data.tag_ids] : []);
+      for (const tid of tagIds) {
+        await db.query('INSERT INTO connect.lead_tags (lead_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [id, tid]);
+      }
+    }
+
     if (fields.length === 0) return await this.findById(id);
 
     fields.push(`updated_at = NOW()`);

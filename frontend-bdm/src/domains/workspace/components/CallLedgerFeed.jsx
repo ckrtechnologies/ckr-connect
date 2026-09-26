@@ -133,14 +133,18 @@ const styles = StyleSheet.create({
   title: {
     ...typography.captionBold,
     color: colors.textPrimary,
+    flex: 1,
+    marginRight: spacing.xs,
   },
   dateLabel: {
     ...typography.caption,
     color: colors.textSecondary,
+    flexShrink: 0,
   },
   itemCard: {
     padding: spacing.md,
     marginBottom: spacing.xs + 2,
+    overflow: 'hidden',
   },
   topRow: {
     flexDirection: 'row',
@@ -150,6 +154,7 @@ const styles = StyleSheet.create({
   contactInfo: {
     flex: 1,
     marginRight: spacing.sm,
+    overflow: 'hidden',
   },
   nameRow: {
     flexDirection: 'row',
@@ -158,10 +163,12 @@ const styles = StyleSheet.create({
   icon: {
     fontSize: 14,
     marginRight: spacing.xs,
+    flexShrink: 0,
   },
   contactName: {
     ...typography.bodyBold,
     color: colors.textPrimary,
+    flex: 1,
   },
   companyName: {
     ...typography.caption,
@@ -170,12 +177,14 @@ const styles = StyleSheet.create({
   },
   resultCol: {
     alignItems: 'flex-end',
+    maxWidth: '45%',
   },
   resultPill: {
     paddingHorizontal: spacing.xs + 2,
     paddingVertical: 2,
     borderRadius: radius.pill,
     borderWidth: 1,
+    maxWidth: '100%',
   },
   pillPositive: {
     backgroundColor: colors.successBg,
@@ -206,6 +215,7 @@ const styles = StyleSheet.create({
     padding: spacing.xs + 2,
     borderRadius: radius.xs,
     marginTop: spacing.xs,
+    overflow: 'hidden',
   },
   notesText: {
     ...typography.body,
@@ -217,16 +227,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: spacing.xs,
+    overflow: 'hidden',
   },
   nextActionLabel: {
     ...typography.captionBold,
     color: colors.primary,
     fontSize: 11,
+    flexShrink: 0,
   },
   nextActionVal: {
     ...typography.caption,
     color: colors.textPrimary,
     fontSize: 11,
+    flex: 1,
   },
   emptyCard: {
     alignItems: 'center',

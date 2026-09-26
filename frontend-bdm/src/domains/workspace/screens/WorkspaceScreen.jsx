@@ -7,9 +7,12 @@ import {
   RefreshControl,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
+  Platform,
 } from 'react-native';
+import DocumentPicker from '@react-native-documents/picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { colors } from '../../../shared/theme/colors.js';
 import { typography } from '../../../shared/theme/typography.js';
 import { spacing } from '../../../shared/theme/spacing.js';
@@ -25,11 +28,19 @@ import { PerformanceTab } from '../components/PerformanceTab.jsx';
 import { useGetBdmDashboardQuery } from '../api.js';
 import { setQuickAddModalOpen } from '../../../shared/store/uiSlice.js';
 import { ROUTES } from '../../../shared/navigation/routes.js';
+import { logout, updateUserAvatar } from '../../auth/slice.js';
+import { useUploadAvatarMutation } from '../../auth/api.js';
+import { storage } from '../../../shared/utils/storage.js';
+import { API_BASE_URL } from '../../../shared/store/baseApi.js';
+import { useAlert } from '../../../shared/components/AppAlert.jsx';
 
 export const WorkspaceScreen = ({ navigation }) => {
   const [activeSubTab, setActiveSubTab] = useState('today'); // 'today' | 'funnel' | 'performance'
   const { data: dashboardData, isLoading, refetch, isFetching } = useGetBdmDashboardQuery();
   const dispatch = useDispatch();
+  const currentUser = useSelector((state) => state.auth.user);
+  const { showAlert, AlertComponent } = useAlert();
+  const [uploadAvatar, { isLoading: isUploadingAvatar }] = useUploadAvatarMutation();
 
   const kpis = dashboardData?.kpis || {};
   const recentActivities = dashboardData?.recent_activities || [];
@@ -47,8 +58,8 @@ export const WorkspaceScreen = ({ navigation }) => {
     proposalValue: Number(kpis.proposal_pipeline_value) || 0,
     wonCount: Number(kpis.won_deals_count ?? kpis.won_leads_count) || 0,
     wonValue: Number(kpis.won_revenue) || 0,
-    totalCount: Number(kpis.active_pipeline_count ?? kpis.assigned_leads_count) || 0,
-    totalValue: Number(kpis.active_pipeline_value ?? kpis.total_pipeline_value) || 0,
+    totalCount: Number(kpis.assigned_leads_count) || 0,
+    totalValue: Number(kpis.total_pipeline_value) || 0,
   };
 
   const handleOpenLead = (leadId) => {
@@ -59,21 +70,93 @@ export const WorkspaceScreen = ({ navigation }) => {
     navigation.navigate(ROUTES.MY_LEADS, { stageFilter });
   };
 
+  const handleLogout = () => {
+    showAlert('confirm', 'Sign Out', 'Are you sure you want to sign out of CKR Connect?', {
+      confirmLabel: 'Sign Out',
+      cancelLabel: 'Stay Signed In',
+      onConfirm: async () => {
+        await storage.clearSession();
+        dispatch(logout());
+      },
+    });
+  };
+
+  const handleUploadDP = async () => {
+    try {
+      const res = await DocumentPicker.pickSingle({
+        type: [DocumentPicker.types.images],
+      });
+      const formData = new FormData();
+      formData.append('avatar', {
+        uri: Platform.OS === 'ios' ? res.uri.replace('file://', '') : res.uri,
+        type: res.type || 'image/jpeg',
+        name: res.name || 'avatar.jpg',
+      });
+      const uploadRes = await uploadAvatar(formData).unwrap();
+      if (uploadRes.success && uploadRes.data?.profile_photo_url) {
+        dispatch(updateUserAvatar(uploadRes.data.profile_photo_url));
+        showAlert('success', 'Profile Picture Updated', 'Your display picture has been updated successfully.');
+      }
+    } catch (err) {
+      if (!DocumentPicker.isCancel(err)) {
+        showAlert('error', 'Upload Failed', err?.data?.message || err?.message || 'Could not upload display picture.');
+      }
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      {AlertComponent}
       {/* Top Header Bar */}
       <View style={styles.topBar}>
-        <Text style={styles.topBarTitle}>My Workspace</Text>
-        <FluentButton
-          title="+ Add Lead"
-          onPress={() => {
-            console.log('>>> Add Lead button tapped! Dispatching setQuickAddModalOpen(true)');
-            dispatch(setQuickAddModalOpen(true));
-          }}
-          variant="primary"
-          size="small"
-          style={styles.addLeadPill}
-        />
+        <View style={styles.brandRow}>
+          <TouchableOpacity 
+            style={styles.brandIconMini} 
+            onPress={handleUploadDP}
+            disabled={isUploadingAvatar}
+          >
+            {currentUser?.avatar_url ? (
+              <Image 
+                source={{ uri: `${API_BASE_URL}${currentUser.avatar_url}` }} 
+                style={styles.avatarImage} 
+              />
+            ) : (
+              <Text style={styles.brandIconMiniText}>
+                {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'CKR'}
+              </Text>
+            )}
+            {isUploadingAvatar && (
+              <View style={styles.avatarLoadingOverlay}>
+                <ActivityIndicator size="small" color="#fff" />
+              </View>
+            )}
+          </TouchableOpacity>
+          <View>
+            <Text style={styles.topBarTitle}>My Workspace</Text>
+            <Text style={styles.topBarSubtitle}>
+              {currentUser?.name || currentUser?.email || 'BDM Executive'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.topBarActions}>
+          <FluentButton
+            title="+ Add"
+            onPress={() => {
+              dispatch(setQuickAddModalOpen(true));
+            }}
+            variant="primary"
+            size="small"
+            style={styles.addLeadPill}
+          />
+          <TouchableOpacity
+            style={styles.signOutBtn}
+            onPress={handleLogout}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.signOutBtnText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -130,8 +213,10 @@ export const WorkspaceScreen = ({ navigation }) => {
           <>
             {/* 1. Punch Status Header Card */}
             <PunchStatusCard
-              isPunchedIn={Boolean(kpis.attendance_marked)}
+              isPunchedIn={Boolean(kpis.attendance_marked && !kpis.punch_out_time)}
+              isPunchedOut={Boolean(kpis.punch_out_time)}
               punchInTime={kpis.punch_in_time}
+              punchOutTime={kpis.punch_out_time}
               onPunchOutPress={() => navigation.navigate(ROUTES.ATTENDANCE)}
               onNavigateToPunch={() => navigation.navigate(ROUTES.ATTENDANCE)}
             />
@@ -157,7 +242,7 @@ export const WorkspaceScreen = ({ navigation }) => {
             {/* 3. High Urgency Alert: Untouched Leads */}
             <UntouchedAlertBanner
               count={matrix.untouchedCount}
-              onCallNowPress={() => handleNavigateToLeads('NEW')}
+              onCallNowPress={() => handleNavigateToLeads('new')}
             />
 
             {/* 4. My Leads Pipeline Matrix (2-Column Grid) */}
@@ -170,7 +255,7 @@ export const WorkspaceScreen = ({ navigation }) => {
             {/* 5. Daily Calling Target & Performance Scorecard */}
             <CallingTargetCard
               loggedCount={kpis.today_interactions?.total_today ?? recentActivities.length}
-              targetCount={15}
+              targetCount={Number(kpis.daily_call_target) || 15}
               positiveCount={
                 kpis.today_interactions?.connected_calls ??
                 recentActivities.filter((i) => i.call_result_type === 'positive').length
@@ -223,14 +308,70 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  brandIconMini: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  avatarLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  brandIconMiniText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 10,
+    letterSpacing: 0.5,
+  },
   topBarTitle: {
-    ...typography.subtitle,
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.textPrimary,
+    lineHeight: 18,
+  },
+  topBarSubtitle: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    lineHeight: 14,
+  },
+  topBarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   addLeadPill: {
     minHeight: 28,
     borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
+  },
+  signOutBtn: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.xs,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceAlt,
+  },
+  signOutBtnText: {
+    fontSize: 11,
+    color: colors.error,
+    fontWeight: '600',
   },
   scrollContent: {
     padding: spacing.md,

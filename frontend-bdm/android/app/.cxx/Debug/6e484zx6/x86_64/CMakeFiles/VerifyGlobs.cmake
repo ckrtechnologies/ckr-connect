@@ -36,6 +36,123 @@ if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
   file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
 endif()
 
+# react_codegen_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/CMakeLists.txt:9 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/*.cpp")
+set(OLD_GLOB
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/rndocumentpickerCGen-generated.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
+endif()
+
+# react_codegen_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/CMakeLists.txt:9 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/react/renderer/components/rndocumentpickerCGen/*.cpp")
+set(OLD_GLOB
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/react/renderer/components/rndocumentpickerCGen/ComponentDescriptors.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/react/renderer/components/rndocumentpickerCGen/EventEmitters.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/react/renderer/components/rndocumentpickerCGen/Props.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/react/renderer/components/rndocumentpickerCGen/ShadowNodes.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/react/renderer/components/rndocumentpickerCGen/States.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
+endif()
+
+# LIB_CUSTOM_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/CMakeLists.txt:23 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/*.cpp")
+set(OLD_GLOB
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
+endif()
+
+# LIB_CUSTOM_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/CMakeLists.txt:23 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/../../../../common/cpp/react/renderer/components/RNKC/*.cpp")
+set(OLD_GLOB
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/../../../../common/cpp/react/renderer/components/RNKC/RNKCClippingScrollViewDecoratorViewShadowNode.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/../../../../common/cpp/react/renderer/components/RNKC/RNKCKeyboardBackgroundViewShadowNode.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/../../../../common/cpp/react/renderer/components/RNKC/RNKCKeyboardControllerViewShadowNode.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/../../../../common/cpp/react/renderer/components/RNKC/RNKCKeyboardExtenderShadowNode.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/../../../../common/cpp/react/renderer/components/RNKC/RNKCKeyboardGestureAreaShadowNode.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/../../../../common/cpp/react/renderer/components/RNKC/RNKCKeyboardToolbarGroupViewShadowNode.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/../../../../common/cpp/react/renderer/components/RNKC/RNKCOverKeyboardViewShadowNode.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/../../../../common/cpp/react/renderer/components/RNKC/RNKCOverKeyboardViewState.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
+endif()
+
+# LIB_CODEGEN_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/CMakeLists.txt:24 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/../../../build/generated/source/codegen/jni/*.cpp")
+set(OLD_GLOB
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/../../../build/generated/source/codegen/jni/RNKC-generated.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
+endif()
+
+# LIB_CODEGEN_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/CMakeLists.txt:24 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/../../../build/generated/source/codegen/jni/react/renderer/components/RNKC/*.cpp")
+set(OLD_GLOB
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/../../../build/generated/source/codegen/jni/react/renderer/components/RNKC/ComponentDescriptors.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/../../../build/generated/source/codegen/jni/react/renderer/components/RNKC/EventEmitters.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/../../../build/generated/source/codegen/jni/react/renderer/components/RNKC/Props.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/../../../build/generated/source/codegen/jni/react/renderer/components/RNKC/ShadowNodes.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/../../../build/generated/source/codegen/jni/react/renderer/components/RNKC/States.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
+endif()
+
+# CODEGEN_ORIGINAL_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-reanimated/Common/NativeView/CMakeLists.txt:7 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-reanimated/Common/NativeView/../../android/build/generated/source/codegen/jni/*.cpp")
+set(OLD_GLOB
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-reanimated/Common/NativeView/../../android/build/generated/source/codegen/jni/rnreanimated-generated.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
+endif()
+
+# CODEGEN_ORIGINAL_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-reanimated/Common/NativeView/CMakeLists.txt:7 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-reanimated/Common/NativeView/../../android/build/generated/source/codegen/jni/react/renderer/components/rnreanimated/*.cpp")
+set(OLD_GLOB
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-reanimated/Common/NativeView/../../android/build/generated/source/codegen/jni/react/renderer/components/rnreanimated/ComponentDescriptors.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-reanimated/Common/NativeView/../../android/build/generated/source/codegen/jni/react/renderer/components/rnreanimated/EventEmitters.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-reanimated/Common/NativeView/../../android/build/generated/source/codegen/jni/react/renderer/components/rnreanimated/Props.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-reanimated/Common/NativeView/../../android/build/generated/source/codegen/jni/react/renderer/components/rnreanimated/ShadowNodes.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-reanimated/Common/NativeView/../../android/build/generated/source/codegen/jni/react/renderer/components/rnreanimated/States.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
+endif()
+
+# CODEGEN_OVERWRITTEN_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-reanimated/Common/NativeView/CMakeLists.txt:15 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-reanimated/Common/NativeView/./*.cpp")
+set(OLD_GLOB
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
+endif()
+
+# CODEGEN_OVERWRITTEN_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-reanimated/Common/NativeView/CMakeLists.txt:15 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-reanimated/Common/NativeView/./react/renderer/components/rnreanimated/*.cpp")
+set(OLD_GLOB
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-reanimated/Common/NativeView/./react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
+endif()
+
 # LIB_CUSTOM_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt:12 (file)
 file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-safe-area-context/android/src/main/jni/*.cpp")
 set(OLD_GLOB
@@ -141,6 +258,67 @@ set(OLD_GLOB
   "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-screens/android/src/main/jni/../../../build/generated/source/codegen/jni/react/renderer/components/rnscreens/Props.cpp"
   "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-screens/android/src/main/jni/../../../build/generated/source/codegen/jni/react/renderer/components/rnscreens/ShadowNodes.cpp"
   "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-screens/android/src/main/jni/../../../build/generated/source/codegen/jni/react/renderer/components/rnscreens/States.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
+endif()
+
+# rnsvg_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-svg/android/src/main/jni/CMakeLists.txt:10 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-svg/android/src/main/jni/*.cpp")
+set(OLD_GLOB
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-svg/android/src/main/jni/rnsvg.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
+endif()
+
+# rnsvg_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-svg/android/src/main/jni/CMakeLists.txt:10 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-svg/android/src/main/jni/../../../../common/cpp/react/renderer/components/rnsvg/*.cpp")
+set(OLD_GLOB
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-svg/android/src/main/jni/../../../../common/cpp/react/renderer/components/rnsvg/RNSVGImageShadowNode.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-svg/android/src/main/jni/../../../../common/cpp/react/renderer/components/rnsvg/RNSVGImageState.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-svg/android/src/main/jni/../../../../common/cpp/react/renderer/components/rnsvg/RNSVGLayoutableShadowNode.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-svg/android/src/main/jni/../../../../common/cpp/react/renderer/components/rnsvg/RNSVGShadowNodes.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
+endif()
+
+# rnsvg_codegen_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-svg/android/src/main/jni/CMakeLists.txt:11 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-svg/android/src/main/jni/../../../build/generated/source/codegen/jni/react/renderer/components/rnsvg/*cpp")
+set(OLD_GLOB
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-svg/android/src/main/jni/../../../build/generated/source/codegen/jni/react/renderer/components/rnsvg/ComponentDescriptors.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-svg/android/src/main/jni/../../../build/generated/source/codegen/jni/react/renderer/components/rnsvg/EventEmitters.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-svg/android/src/main/jni/../../../build/generated/source/codegen/jni/react/renderer/components/rnsvg/Props.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-svg/android/src/main/jni/../../../build/generated/source/codegen/jni/react/renderer/components/rnsvg/ShadowNodes.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-svg/android/src/main/jni/../../../build/generated/source/codegen/jni/react/renderer/components/rnsvg/States.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
+endif()
+
+# react_codegen_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-worklets/android/build/generated/source/codegen/jni/CMakeLists.txt:9 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-worklets/android/build/generated/source/codegen/jni/*.cpp")
+set(OLD_GLOB
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-worklets/android/build/generated/source/codegen/jni/rnworklets-generated.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
+endif()
+
+# react_codegen_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-worklets/android/build/generated/source/codegen/jni/CMakeLists.txt:9 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-worklets/android/build/generated/source/codegen/jni/react/renderer/components/rnworklets/*.cpp")
+set(OLD_GLOB
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-worklets/android/build/generated/source/codegen/jni/react/renderer/components/rnworklets/ComponentDescriptors.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-worklets/android/build/generated/source/codegen/jni/react/renderer/components/rnworklets/EventEmitters.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-worklets/android/build/generated/source/codegen/jni/react/renderer/components/rnworklets/Props.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-worklets/android/build/generated/source/codegen/jni/react/renderer/components/rnworklets/ShadowNodes.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-worklets/android/build/generated/source/codegen/jni/react/renderer/components/rnworklets/States.cpp"
   )
 if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
   message("-- GLOB mismatch!")

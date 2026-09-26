@@ -38,7 +38,8 @@ export const authService = {
       email: user.email,
       role: user.role,
       force_password_reset: user.force_password_reset,
-      has_seen_onboarding: user.has_seen_onboarding
+      has_seen_onboarding: user.has_seen_onboarding,
+      avatar_url: user.profile_photo_url
     };
 
     const accessToken = jwt.sign(tokenPayload, secrets.jwt.secret, {
@@ -101,7 +102,8 @@ export const authService = {
         email: user.email,
         role: user.role,
         force_password_reset: user.force_password_reset,
-        has_seen_onboarding: user.has_seen_onboarding
+        has_seen_onboarding: user.has_seen_onboarding,
+        avatar_url: user.profile_photo_url
       };
 
       const accessToken = jwt.sign(tokenPayload, secrets.jwt.secret, {
@@ -122,5 +124,9 @@ export const authService = {
    */
   async markOnboardingSeen(userId) {
     return await authRepository.markOnboardingSeen(userId);
+  },
+
+  async updateAvatar(userId, avatarUrl) {
+    return await authRepository.updateAvatar(userId, avatarUrl);
   }
 };

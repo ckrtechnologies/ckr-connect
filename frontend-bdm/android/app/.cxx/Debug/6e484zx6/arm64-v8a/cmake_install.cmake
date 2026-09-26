@@ -45,8 +45,13 @@ endif()
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
   include("/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/arm64-v8a/AsyncStorageSpec_autolinked_build/cmake_install.cmake")
+  include("/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/arm64-v8a/rndocumentpickerCGen_autolinked_build/cmake_install.cmake")
+  include("/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/arm64-v8a/RNKC_autolinked_build/cmake_install.cmake")
+  include("/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/arm64-v8a/rnreanimated_autolinked_build/cmake_install.cmake")
   include("/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/arm64-v8a/safeareacontext_autolinked_build/cmake_install.cmake")
   include("/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/arm64-v8a/rnscreens_autolinked_build/cmake_install.cmake")
+  include("/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/arm64-v8a/rnsvg_autolinked_build/cmake_install.cmake")
+  include("/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/arm64-v8a/rnworklets_autolinked_build/cmake_install.cmake")
 
 endif()
 

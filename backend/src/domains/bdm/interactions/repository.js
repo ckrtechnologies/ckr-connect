@@ -27,9 +27,9 @@ export const bdmInteractionsRepository = {
       // Insert interaction
       const insertQuery = `
         INSERT INTO connect.lead_interactions (
-          lead_id, bdm_id, type, call_result, call_result_label,
+          lead_id, bdm_id, type, call_result, call_result_label, call_result_type,
           notes, status_snapshot, next_action
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
       `;
       const insertValues = [
@@ -38,6 +38,7 @@ export const bdmInteractionsRepository = {
         data.type || data.channel || 'call',
         data.call_result || data.outcome || 'connected',
         data.call_result_label || null,
+        data.call_result_type || 'positive',
         data.notes || data.discussion_notes,
         currentLead.status,
         data.next_action || null

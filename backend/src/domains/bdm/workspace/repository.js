@@ -7,9 +7,15 @@ export const bdmWorkspaceRepository = {
   async getBdmMetrics(bdmId, year, month) {
     // 1. Staff target
     const staffRes = await db.query(
-      `SELECT id, name, employee_id, sales_target AS target_amount 
-       FROM connect.users 
-       WHERE id = $1`,
+      `SELECT 
+         u.id, 
+         u.name, 
+         u.employee_id, 
+         u.sales_target AS target_amount,
+         COALESCE(ut.daily_call_target, 15)::int AS daily_call_target
+       FROM connect.users u
+       LEFT JOIN connect.user_targets ut ON ut.user_id = u.id
+       WHERE u.id = $1`,
       [bdmId]
     );
     const staff = staffRes.rows[0];
@@ -28,11 +34,28 @@ export const bdmWorkspaceRepository = {
     );
     const wonData = wonRes.rows[0];
 
-    // 3. Active pipeline count & total value
+    const lostRes = await db.query(
+      `SELECT COUNT(*)::int AS lost_deals_count
+       FROM connect.leads
+       WHERE assigned_to = $1 
+         AND status = 'lost'
+         AND EXTRACT(YEAR FROM updated_at) = $2
+         AND EXTRACT(MONTH FROM updated_at) = $3`,
+      [bdmId, year, month]
+    );
+    const lostData = lostRes.rows[0];
+
+    // 3. Active pipeline count & total value + weighted pipeline
     const pipelineRes = await db.query(
       `SELECT 
          COUNT(*)::int AS active_count,
-         COALESCE(SUM(expected_value), 0)::numeric AS pipeline_value
+         COALESCE(SUM(expected_value), 0)::numeric AS pipeline_value,
+         COALESCE(SUM(expected_value * CASE status 
+           WHEN 'proposal' THEN 0.75 
+           WHEN 'follow_up' THEN 0.50 
+           WHEN 'contacted' THEN 0.25 
+           WHEN 'new' THEN 0.10 
+           ELSE 0 END), 0)::numeric AS weighted_pipeline
        FROM connect.leads
        WHERE assigned_to = $1 
          AND status NOT IN ('won', 'lost', 'invalid')`,
@@ -40,25 +63,79 @@ export const bdmWorkspaceRepository = {
     );
     const pipelineData = pipelineRes.rows[0];
 
-    // 4. Today's interactions count
+    // 4. Stage matrix breakdown & counts
+    const stagesRes = await db.query(
+      `SELECT 
+         COUNT(CASE WHEN status = 'new' AND followup_count = 0 THEN 1 END)::int AS untouched_leads_count,
+         COALESCE(SUM(CASE WHEN status = 'new' AND followup_count = 0 THEN expected_value ELSE 0 END), 0)::numeric AS untouched_pipeline_value,
+         COUNT(CASE WHEN status = 'contacted' THEN 1 END)::int AS contacted_leads_count,
+         COALESCE(SUM(CASE WHEN status = 'contacted' THEN expected_value ELSE 0 END), 0)::numeric AS contacted_pipeline_value,
+         COUNT(CASE WHEN status = 'follow_up' THEN 1 END)::int AS followup_leads_count,
+         COALESCE(SUM(CASE WHEN status = 'follow_up' THEN expected_value ELSE 0 END), 0)::numeric AS followup_pipeline_value,
+         COUNT(CASE WHEN status = 'proposal' THEN 1 END)::int AS proposal_leads_count,
+         COALESCE(SUM(CASE WHEN status = 'proposal' THEN expected_value ELSE 0 END), 0)::numeric AS proposal_pipeline_value,
+         COUNT(CASE WHEN status = 'lost' THEN 1 END)::int AS lost_leads_count,
+         COUNT(*)::int AS assigned_leads_count,
+         COALESCE(SUM(expected_value), 0)::numeric AS total_pipeline_value
+       FROM connect.leads
+       WHERE assigned_to = $1 AND status NOT IN ('invalid')`,
+      [bdmId]
+    );
+    const stagesData = stagesRes.rows[0];
+
+    // 5. Today's interactions count
     const todayInteractionsRes = await db.query(
       `SELECT 
          COUNT(*)::int AS total_today,
-         COUNT(CASE WHEN type = 'call' AND call_result = 'connected' THEN 1 END)::int AS connected_calls,
+         COUNT(CASE WHEN type = 'call' AND (call_result ILIKE '%connect%' OR call_result ILIKE '%positive%' OR call_result ILIKE '%captured%') THEN 1 END)::int AS connected_calls,
          COUNT(CASE WHEN type = 'meeting' THEN 1 END)::int AS meetings
        FROM connect.lead_interactions
-       WHERE bdm_id = $1 AND created_at::date = CURRENT_DATE`,
+       WHERE bdm_id = $1 AND created_at::date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date`,
       [bdmId]
     );
     const todayInteractions = todayInteractionsRes.rows[0];
 
+    // 6. Attendance check for today
+    const attendanceRes = await db.query(
+      `SELECT check_in_time, check_out_time, status
+       FROM connect.attendance
+       WHERE bdm_id = $1 AND date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [bdmId]
+    );
+    const todayAttendance = attendanceRes.rows[0];
+
+    // 7. Conversion rate and avg deal size
+    const wonCount = wonData?.won_deals_count || 0;
+    const lostCountThisMonth = lostData?.lost_deals_count || 0;
+    const totalDecidedThisMonth = wonCount + lostCountThisMonth;
+    const conversionRate = totalDecidedThisMonth > 0
+      ? Math.round((wonCount / totalDecidedThisMonth) * 100)
+      : (stagesData?.assigned_leads_count > 0 ? Math.round((wonCount / stagesData.assigned_leads_count) * 100) : 0);
+
+    const wonRev = parseFloat(wonData?.won_revenue) || 0;
+    const activeVal = parseFloat(pipelineData?.pipeline_value) || 0;
+    const activeCnt = pipelineData?.active_count || 0;
+    const avgDealSize = wonCount > 0 
+      ? Math.round(wonRev / wonCount) 
+      : (activeCnt > 0 ? Math.round(activeVal / activeCnt) : 0);
+
     return {
       bdm: staff,
       target_amount: staff?.target_amount || 0,
+      daily_call_target: parseInt(staff?.daily_call_target || 15, 10),
       won_revenue: wonData?.won_revenue || 0,
       won_deals_count: wonData?.won_deals_count || 0,
       active_pipeline_count: pipelineData?.active_count || 0,
       active_pipeline_value: pipelineData?.pipeline_value || 0,
+      weighted_pipeline: pipelineData?.weighted_pipeline || 0,
+      avg_deal_size: avgDealSize,
+      conversion_rate: conversionRate,
+      ...stagesData,
+      attendance_marked: Boolean(todayAttendance?.check_in_time),
+      punch_in_time: todayAttendance?.check_in_time || null,
+      punch_out_time: todayAttendance?.check_out_time || null,
       today_interactions: todayInteractions
     };
   },
@@ -141,6 +218,7 @@ export const bdmWorkspaceRepository = {
         l.company_name,
         i.type AS channel,
         i.call_result AS outcome,
+        i.call_result_type,
         i.notes AS discussion_notes,
         i.next_action,
         i.created_at

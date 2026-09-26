@@ -8,6 +8,7 @@ export const createStaffSchema = z.object({
   role: z.enum(['admin', 'bdm', 'telecaller', 'manager']).default('bdm'),
   designation: z.string().optional(),
   target_amount: z.number().nonnegative().optional().default(0),
+  daily_call_target: z.coerce.number().int().min(1).max(500).optional().default(15),
   temp_password: z.string().min(6).optional().default('password@1'),
   date_of_joining: z.string().optional()
 });
@@ -19,6 +20,7 @@ export const updateStaffSchema = z.object({
   role: z.enum(['admin', 'bdm', 'telecaller', 'manager']).optional(),
   designation: z.string().optional(),
   target_amount: z.number().nonnegative().optional(),
+  daily_call_target: z.coerce.number().int().min(1).max(500).optional(),
   is_active: z.boolean().optional(),
   status: z.enum(['active', 'inactive', 'suspended']).optional(),
   date_of_joining: z.string().optional()

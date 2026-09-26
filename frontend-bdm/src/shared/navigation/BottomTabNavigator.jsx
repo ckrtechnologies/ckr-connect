@@ -1,23 +1,22 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { useSelector } from 'react-redux';
 import { colors } from '../theme/colors.js';
 import { typography } from '../theme/typography.js';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { radius } from '../theme/radius.js';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ROUTES } from './routes.js';
 
 import { WorkspaceScreen } from '../../domains/workspace/screens/WorkspaceScreen.jsx';
 import { MyLeadsScreen } from '../../domains/leads/screens/MyLeadsScreen.jsx';
 import { AttendancePunchScreen } from '../../domains/attendance/screens/AttendancePunchScreen.jsx';
-import { NotificationsScreen } from '../../domains/notifications/screens/NotificationsScreen.jsx';
+import { ProfileScreen } from '../../domains/profile/screens/ProfileScreen.jsx';
+import { LayoutDashboard, FileSpreadsheet, Timer, CircleUserRound } from 'lucide-react-native';
 
 const Tab = createBottomTabNavigator();
 
 export const BottomTabNavigator = () => {
   const insets = useSafeAreaInsets();
-  const unreadCount = useSelector((state) => state.ui.unreadNotificationsCount);
 
   return (
     <Tab.Navigator
@@ -42,7 +41,7 @@ export const BottomTabNavigator = () => {
         options={{
           tabBarLabel: 'Dashboard',
           tabBarIcon: ({ color, focused }) => (
-            <Text style={[styles.tabIcon, { color }]}>{focused ? '🏠' : '🏚️'}</Text>
+            <LayoutDashboard size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
           ),
         }}
       />
@@ -53,9 +52,7 @@ export const BottomTabNavigator = () => {
         options={{
           tabBarLabel: 'My Leads',
           tabBarIcon: ({ color, focused }) => (
-            <View>
-              <Text style={[styles.tabIcon, { color }]}>{focused ? '📋' : '📄'}</Text>
-            </View>
+            <FileSpreadsheet size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
           ),
         }}
       />
@@ -66,20 +63,18 @@ export const BottomTabNavigator = () => {
         options={{
           tabBarLabel: 'Attendance',
           tabBarIcon: ({ color, focused }) => (
-            <Text style={[styles.tabIcon, { color }]}>{focused ? '⏰' : '⏱️'}</Text>
+            <Timer size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
           ),
         }}
       />
 
       <Tab.Screen
-        name={ROUTES.NOTIFICATIONS}
-        component={NotificationsScreen}
+        name={ROUTES.PROFILE}
+        component={ProfileScreen}
         options={{
-          tabBarLabel: 'Alerts',
-          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
-          tabBarBadgeStyle: styles.badge,
+          tabBarLabel: 'Profile',
           tabBarIcon: ({ color, focused }) => (
-            <Text style={[styles.tabIcon, { color }]}>{focused ? '🔔' : '🔕'}</Text>
+            <CircleUserRound size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
           ),
         }}
       />

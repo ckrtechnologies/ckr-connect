@@ -8,33 +8,57 @@ import { formatTime } from '../../../shared/utils/formatters.js';
 
 export const PunchStatusCard = ({
   isPunchedIn,
+  isPunchedOut,
   punchInTime,
+  punchOutTime,
   onPunchOutPress,
   onNavigateToPunch,
 }) => {
+  const getStatusText = () => {
+    if (isPunchedOut) {
+      return `Shift Completed · Out at ${formatTime(punchOutTime)}`;
+    }
+    if (isPunchedIn) {
+      return `Checked In · ${formatTime(punchInTime)}`;
+    }
+    return 'Not Checked In Yet';
+  };
+
+  const getActionBtnText = () => {
+    if (isPunchedOut) {
+      return 'View Audit ›';
+    }
+    if (isPunchedIn) {
+      return 'Punch Out';
+    }
+    return 'Punch In ›';
+  };
+
+  const dotColor = isPunchedOut
+    ? colors.success
+    : isPunchedIn
+    ? colors.success
+    : colors.warning;
+
   return (
     <View style={styles.card}>
       <View style={styles.statusRow}>
-        <View
-          style={[
-            styles.pulseDot,
-            { backgroundColor: isPunchedIn ? colors.success : colors.warning },
-          ]}
-        />
-        <Text style={styles.statusText}>
-          {isPunchedIn
-            ? `Checked In · ${formatTime(punchInTime)}`
-            : 'Not Checked In Yet'}
+        <View style={[styles.pulseDot, { backgroundColor: dotColor }]} />
+        <Text style={styles.statusText} numberOfLines={1}>
+          {getStatusText()}
         </Text>
       </View>
 
       <TouchableOpacity
-        style={styles.actionBtn}
-        onPress={isPunchedIn ? onPunchOutPress : onNavigateToPunch}
+        style={[
+          styles.actionBtn,
+          isPunchedOut && styles.completedActionBtn,
+        ]}
+        onPress={isPunchedOut ? onNavigateToPunch : isPunchedIn ? onPunchOutPress : onNavigateToPunch}
         activeOpacity={0.8}
       >
         <Text style={styles.actionBtnText}>
-          {isPunchedIn ? 'Punch Out' : 'Punch In ›'}
+          {getActionBtnText()}
         </Text>
       </TouchableOpacity>
     </View>
@@ -55,6 +79,8 @@ const styles = StyleSheet.create({
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: spacing.sm,
   },
   pulseDot: {
     width: 8,
@@ -63,14 +89,21 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   statusText: {
-    ...typography.captionBold,
+    ...typography.bodyBold,
     color: colors.textOnPrimary,
+    fontSize: 13,
   },
   actionBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
     borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  completedActionBtn: {
+    backgroundColor: 'rgba(16, 124, 16, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   actionBtnText: {
     ...typography.captionBold,

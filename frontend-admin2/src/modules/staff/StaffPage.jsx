@@ -242,9 +242,12 @@ export default function StaffPage() {
                         <strong>{u.active_leads_count ?? 0}</strong>
                       </td>
                       <td>
-                        <span style={{ fontSize: '12px', fontWeight: 500 }}>
+                        <div style={{ fontSize: '12px', fontWeight: 500 }}>
                           {formatCurrency(u.target_amount ?? u.sales_target)}
-                        </span>
+                        </div>
+                        <div style={{ fontSize: '10px', color: 'var(--color-primary)', fontWeight: 600, marginTop: '2px' }}>
+                          🎯 {u.daily_call_target ?? 15} calls/day
+                        </div>
                       </td>
                       <td>
                         <span className={`status-badge ${u.status === 'active' || u.is_active ? 'won' : 'invalid'}`}>

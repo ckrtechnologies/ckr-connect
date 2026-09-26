@@ -6,11 +6,12 @@ import { spacing } from '../../../shared/theme/spacing.js';
 import { radius } from '../../../shared/theme/radius.js';
 import { FluentCard } from '../../../shared/components/FluentCard.jsx';
 import { StatusBadge } from '../../../shared/components/StatusBadge.jsx';
-import { formatCurrency } from '../../../shared/utils/formatters.js';
+import { formatCurrency, formatDateTime } from '../../../shared/utils/formatters.js';
 import { makePhoneCall, openWhatsApp } from '../../../shared/utils/communication.js';
+import { Phone, MessageCircle } from 'lucide-react-native';
 
 export const LeadCardItem = ({ lead, onPress }) => {
-  const isUntouched = (lead.status || '').toLowerCase() === 'new' || lead.followup_count === 0;
+  const isUntouched = (lead.status || '').toLowerCase() === 'new' && lead.followup_count === 0;
   const isWon = (lead.status || '').toLowerCase() === 'won';
   const isOverdue = lead.is_overdue || (lead.next_followup_date && new Date(lead.next_followup_date) < new Date());
   const isDueToday = lead.is_due_today;
@@ -62,39 +63,45 @@ export const LeadCardItem = ({ lead, onPress }) => {
               {formatCurrency(lead.expected_value || lead.budget || 0)}
             </Text>
             {isOverdue ? (
-              <Text style={styles.overdueAlert}>🚨 Overdue</Text>
+              <Text style={styles.overdueAlert} numberOfLines={1}>🚨 Overdue</Text>
             ) : isDueToday ? (
-              <Text style={styles.dueTodayAlert}>⏰ Due Today</Text>
+              <Text style={styles.dueTodayAlert} numberOfLines={1}>⏰ Due Today</Text>
             ) : isWon ? (
-              <Text style={styles.wonAlert}>🏆 Deal Won</Text>
+              <Text style={styles.wonAlert} numberOfLines={1}>🏆 Deal Won</Text>
+            ) : lead.next_followup_date ? (
+              <Text style={styles.scheduledAlert} numberOfLines={1}>
+                ⏰ {formatDateTime(lead.next_followup_date)}
+              </Text>
             ) : isUntouched ? (
-              <Text style={styles.zeroCallsAlert}>0 Calls Made</Text>
+              <Text style={styles.zeroCallsAlert} numberOfLines={1}>0 Calls Made</Text>
             ) : null}
           </View>
 
           {/* Quick Action Touch Targets */}
           <View style={styles.actionsGroup}>
             <TouchableOpacity
-              style={[styles.actionBtn, isUntouched ? styles.callBtnPrimary : styles.callBtnSecondary]}
+              style={[styles.actionBtn, isUntouched ? styles.callBtnPrimary : styles.callBtnSecondary, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
               onPress={handleCall}
               activeOpacity={0.8}
             >
+              <Phone size={12} color={isUntouched ? colors.textOnPrimary : colors.textPrimary} />
               <Text
                 style={[
                   styles.actionBtnText,
                   isUntouched ? styles.callBtnTextPrimary : styles.callBtnTextSecondary,
                 ]}
               >
-                📞 Call
+                Call
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionBtn, styles.waBtn]}
+              style={[styles.actionBtn, styles.waBtn, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
               onPress={handleWhatsApp}
               activeOpacity={0.8}
             >
-              <Text style={styles.waBtnText}>💬 WA</Text>
+              <MessageCircle size={12} color="#055E38" />
+              <Text style={styles.waBtnText}>WA</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -166,39 +173,56 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     paddingTop: spacing.sm,
     marginTop: spacing.sm,
+    overflow: 'hidden',
+    gap: spacing.xs,
   },
   valueRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    overflow: 'hidden',
+    marginRight: spacing.xs,
   },
   leadValue: {
     ...typography.bodyBold,
     color: colors.textPrimary,
     marginRight: spacing.xs,
+    flexShrink: 0,
   },
   overdueAlert: {
     ...typography.captionBold,
     color: colors.error,
     fontSize: 11,
+    flexShrink: 1,
   },
   dueTodayAlert: {
     ...typography.captionBold,
     color: colors.warning,
     fontSize: 11,
+    flexShrink: 1,
+  },
+  scheduledAlert: {
+    ...typography.captionBold,
+    color: colors.primary,
+    fontSize: 10,
+    flex: 1,
   },
   wonAlert: {
     ...typography.captionBold,
     color: colors.success,
     fontSize: 11,
+    flexShrink: 1,
   },
   zeroCallsAlert: {
     ...typography.captionBold,
     color: '#B45309',
     fontSize: 11,
+    flexShrink: 1,
   },
   actionsGroup: {
     flexDirection: 'row',
     gap: spacing.xs,
+    flexShrink: 0,
   },
   actionBtn: {
     paddingHorizontal: spacing.sm,

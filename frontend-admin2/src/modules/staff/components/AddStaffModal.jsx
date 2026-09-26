@@ -28,6 +28,7 @@ export default function AddStaffModal({ isOpen, onClose, onSuccess }) {
       role: 'bdm',
       designation: 'Business Development Manager',
       target_amount: 500000,
+      daily_call_target: 15,
       date_of_joining: '',
       temp_password: '',
     });
@@ -56,6 +57,7 @@ export default function AddStaffModal({ isOpen, onClose, onSuccess }) {
         role: formData.role,
         designation: formData.designation.trim() || undefined,
         target_amount: Number(formData.target_amount) || 0,
+        daily_call_target: Number(formData.daily_call_target) || 15,
         date_of_joining: formData.date_of_joining || undefined,
         temp_password: formData.temp_password.trim() || undefined,
       };
@@ -201,6 +203,19 @@ export default function AddStaffModal({ isOpen, onClose, onSuccess }) {
                   className="form-field-input"
                   value={formData.target_amount}
                   onChange={(e) => setFormData({ ...formData, target_amount: e.target.value })}
+                />
+              </div>
+
+              <div className="form-field-group">
+                <label className="form-field-label">Daily Calling Target (Calls / Day)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="200"
+                  className="form-field-input"
+                  value={formData.daily_call_target}
+                  onChange={(e) => setFormData({ ...formData, daily_call_target: e.target.value })}
+                  placeholder="15"
                 />
               </div>
 

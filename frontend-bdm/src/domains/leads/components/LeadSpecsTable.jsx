@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { colors } from '../../../shared/theme/colors.js';
 import { typography } from '../../../shared/theme/typography.js';
 import { spacing } from '../../../shared/theme/spacing.js';
-import { formatCurrency, formatDate } from '../../../shared/utils/formatters.js';
+import { formatCurrency, formatDate, formatDateTime } from '../../../shared/utils/formatters.js';
 
 export const LeadSpecsTable = ({ lead, interactionCount = 0 }) => {
   const specs = [
@@ -33,7 +33,7 @@ export const LeadSpecsTable = ({ lead, interactionCount = 0 }) => {
     {
       label: '⏰ Next Action Due',
       value: lead.next_followup_date
-        ? formatDate(lead.next_followup_date)
+        ? formatDateTime(lead.next_followup_date)
         : 'None scheduled',
     },
     {
@@ -81,6 +81,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     marginTop: spacing.xs,
+    overflow: 'hidden',
   },
   row: {
     flexDirection: 'row',
@@ -88,7 +89,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs + 2,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
   },
   lastRow: {
     borderBottomWidth: 0,
@@ -103,7 +105,7 @@ const styles = StyleSheet.create({
     ...typography.bodyBold,
     color: colors.textPrimary,
     fontSize: 12,
-    flex: 1.2,
+    flex: 1.4,
     textAlign: 'right',
   },
   valueHighlight: {

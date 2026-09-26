@@ -9,10 +9,25 @@ export const bdmAttendanceRepository = {
          date::text AS date,
          check_in_time AS punch_in,
          check_out_time AS punch_out,
+         CASE 
+           WHEN check_in_time IS NOT NULL AND check_out_time IS NOT NULL 
+           THEN ROUND(EXTRACT(EPOCH FROM (check_out_time - check_in_time)) / 3600.0, 2)
+           ELSE NULL
+         END AS total_hours,
          status,
          correction_reason
        FROM connect.attendance 
-       WHERE bdm_id = $1 AND date = CURRENT_DATE`,
+       WHERE bdm_id = $1 AND date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date`,
+      [bdmId]
+    );
+    return rows[0] || null;
+  },
+
+  async getUserJoiningDate(bdmId) {
+    const { rows } = await db.query(
+      `SELECT date_of_joining::text AS date_of_joining, created_at::date::text AS created_date
+       FROM connect.users 
+       WHERE id = $1`,
       [bdmId]
     );
     return rows[0] || null;
@@ -21,7 +36,7 @@ export const bdmAttendanceRepository = {
   async punchIn(bdmId) {
     const { rows } = await db.query(
       `INSERT INTO connect.attendance (bdm_id, date, check_in_time, status)
-       VALUES ($1, CURRENT_DATE, NOW(), 'present')
+       VALUES ($1, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date, NOW(), 'present')
        ON CONFLICT (bdm_id, date) DO UPDATE
        SET check_in_time = COALESCE(connect.attendance.check_in_time, NOW()),
            status = 'present'
@@ -44,7 +59,7 @@ export const bdmAttendanceRepository = {
       `UPDATE connect.attendance
        SET 
          check_out_time = NOW()
-       WHERE bdm_id = $1 AND date = CURRENT_DATE
+       WHERE bdm_id = $1 AND date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date
        RETURNING id, bdm_id, date::text AS date, check_in_time AS punch_in, check_out_time AS punch_out, status`,
       [bdmId]
     );

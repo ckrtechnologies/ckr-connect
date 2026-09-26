@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../../shared/theme/colors.js';
@@ -19,11 +18,13 @@ import {
   useMarkNotificationAsReadMutation,
   useMarkAllNotificationsAsReadMutation,
 } from '../api.js';
+import { useAlert } from '../../../shared/components/AppAlert.jsx';
 
 export const NotificationsScreen = () => {
   const { data: notificationsData, isLoading, refetch, isFetching } = useGetNotificationsQuery();
   const [markRead] = useMarkNotificationAsReadMutation();
   const [markAllRead, { isLoading: isMarkingAll }] = useMarkAllNotificationsAsReadMutation();
+  const { showAlert, AlertComponent } = useAlert();
 
   const notifications =
     notificationsData?.items || (Array.isArray(notificationsData) ? notificationsData : []);
@@ -34,21 +35,22 @@ export const NotificationsScreen = () => {
     try {
       await markRead(id).unwrap();
     } catch (err) {
-      Alert.alert('Action Failed', 'Could not mark notification as read.');
+      showAlert('error', 'Action Failed', 'Could not mark notification as read.');
     }
   };
 
   const handleMarkAllRead = async () => {
     try {
       await markAllRead().unwrap();
-      Alert.alert('All Marked Read', 'All notifications cleared.');
+      showAlert('success', 'All Marked Read', 'All notifications cleared.');
     } catch (err) {
-      Alert.alert('Action Failed', 'Could not clear notifications.');
+      showAlert('error', 'Action Failed', 'Could not clear notifications.');
     }
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      {AlertComponent}
       {/* Header Bar */}
       <View style={styles.headerBar}>
         <View>

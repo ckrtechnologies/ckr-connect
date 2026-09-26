@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,22 +8,30 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../../../shared/theme/colors.js';
 import { typography } from '../../../shared/theme/typography.js';
 import { spacing } from '../../../shared/theme/spacing.js';
+import { radius } from '../../../shared/theme/radius.js';
 import { FluentCard } from '../../../shared/components/FluentCard.jsx';
 import { AttendanceHistoryItem } from '../components/AttendanceHistoryItem.jsx';
 import { useGetMyAttendanceHistoryQuery } from '../api.js';
 
 export const AttendanceHistoryScreen = ({ navigation }) => {
   const now = new Date();
-  const [year] = useState(now.getFullYear());
-  const [month] = useState(now.getMonth() + 1);
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
 
   const { data: historyData, isLoading, refetch, isFetching } = useGetMyAttendanceHistoryQuery({
     year,
     month,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const summary = historyData?.summary || {
     present: 0,
@@ -34,9 +42,35 @@ export const AttendanceHistoryScreen = ({ navigation }) => {
 
   const days = historyData?.days || [];
 
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
+
+  const handlePrevMonth = () => {
+    if (month === 1) {
+      setMonth(12);
+      setYear((y) => y - 1);
+    } else {
+      setMonth((m) => m - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (isCurrentMonth) return;
+    if (month === 12) {
+      setMonth(1);
+      setYear((y) => y + 1);
+    } else {
+      setMonth((m) => m + 1);
+    }
+  };
+
+  const formattedMonthTitle = new Date(year, month - 1, 1).toLocaleString('en-IN', {
+    month: 'long',
+    year: 'numeric',
+  });
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top Header */}
+      {/* Top Header Bar */}
       <View style={styles.headerBar}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -47,6 +81,37 @@ export const AttendanceHistoryScreen = ({ navigation }) => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Monthly Audit</Text>
         <View style={styles.placeholder} />
+      </View>
+
+      {/* Month Navigation Control Bar */}
+      <View style={styles.monthNavigator}>
+        <TouchableOpacity
+          onPress={handlePrevMonth}
+          style={styles.monthNavBtn}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.monthNavArrow}>‹</Text>
+        </TouchableOpacity>
+
+        <View style={styles.monthTitleWrapper}>
+          <Text style={styles.monthTitleText}>{formattedMonthTitle}</Text>
+          {isCurrentMonth ? (
+            <View style={styles.currentBadge}>
+              <Text style={styles.currentBadgeText}>CURRENT</Text>
+            </View>
+          ) : null}
+        </View>
+
+        <TouchableOpacity
+          onPress={handleNextMonth}
+          disabled={isCurrentMonth}
+          style={[styles.monthNavBtn, isCurrentMonth && styles.monthNavBtnDisabled]}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.monthNavArrow, isCurrentMonth && styles.monthNavArrowDisabled]}>
+            ›
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -61,7 +126,7 @@ export const AttendanceHistoryScreen = ({ navigation }) => {
             <FluentCard style={styles.summaryCard}>
               <View style={styles.summaryHeader}>
                 <Text style={styles.summaryTitle}>
-                  {now.toLocaleString('en-IN', { month: 'long', year: 'numeric' })} Summary
+                  {formattedMonthTitle} Summary
                 </Text>
                 <Text style={styles.presentCount}>
                   {summary.present} Days Present
@@ -94,19 +159,15 @@ export const AttendanceHistoryScreen = ({ navigation }) => {
               </View>
             </FluentCard>
 
-            <Text style={styles.listTitle}>DAILY PUNCH LOGS</Text>
+            <Text style={styles.listTitle}>DAILY PUNCH LOGS ({days.length} DAYS)</Text>
           </View>
         }
         renderItem={({ item }) => <AttendanceHistoryItem item={item} />}
         ListEmptyComponent={
           isLoading ? (
-            <ActivityIndicator
-              size="large"
-              color={colors.primary}
-              style={styles.loader}
-            />
+            <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
           ) : (
-            <Text style={styles.emptyText}>No attendance records for this month.</Text>
+            <Text style={styles.emptyText}>No attendance records for {formattedMonthTitle}.</Text>
           )
         }
       />
@@ -142,6 +203,56 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     width: 60,
+  },
+  monthNavigator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  monthNavBtn: {
+    width: 40,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthNavBtnDisabled: {
+    opacity: 0.4,
+  },
+  monthNavArrow: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  monthNavArrowDisabled: {
+    color: colors.textDisabled,
+  },
+  monthTitleWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  monthTitleText: {
+    ...typography.subtitle,
+    color: colors.textPrimary,
+    fontWeight: '700',
+  },
+  currentBadge: {
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.xs,
+  },
+  currentBadgeText: {
+    ...typography.captionBold,
+    color: colors.primary,
+    fontSize: 9,
   },
   listContent: {
     padding: spacing.md,

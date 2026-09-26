@@ -2,10 +2,13 @@ import { Linking, Alert } from 'react-native';
 
 /**
  * Trigger Native Phone Dialer
+ * @param {string} phone
+ * @param {Function} [onError] - optional branded alert callback: (title, msg) => void
  */
-export const makePhoneCall = async (phone) => {
+export const makePhoneCall = async (phone, onError) => {
+  const alert = onError || ((t, m) => Alert.alert(t, m));
   if (!phone) {
-    Alert.alert('Phone Missing', 'No phone number available for this contact.');
+    alert('Phone Missing', 'No phone number available for this contact.');
     return;
   }
   const cleanPhone = String(phone).replace(/[^0-9+]/g, '');
@@ -15,19 +18,23 @@ export const makePhoneCall = async (phone) => {
     if (supported) {
       await Linking.openURL(url);
     } else {
-      Alert.alert('Not Supported', `Your device cannot dial ${phone} directly.`);
+      alert('Not Supported', `Your device cannot dial ${phone} directly.`);
     }
   } catch (err) {
-    Alert.alert('Dialer Error', err.message || 'Could not launch cellular dialer.');
+    alert('Dialer Error', err.message || 'Could not launch cellular dialer.');
   }
 };
 
 /**
  * Trigger WhatsApp Chat
+ * @param {string} phone
+ * @param {string} [defaultText]
+ * @param {Function} [onError] - optional branded alert callback: (title, msg) => void
  */
-export const openWhatsApp = async (phone, defaultText = '') => {
+export const openWhatsApp = async (phone, defaultText = '', onError) => {
+  const alert = onError || ((t, m) => Alert.alert(t, m));
   if (!phone) {
-    Alert.alert('Phone Missing', 'No phone number available for WhatsApp.');
+    alert('Phone Missing', 'No phone number available for WhatsApp.');
     return;
   }
   const cleanPhone = String(phone).replace(/[^0-9]/g, '');
@@ -36,22 +43,26 @@ export const openWhatsApp = async (phone, defaultText = '') => {
   try {
     await Linking.openURL(url);
   } catch (err) {
-    Alert.alert('WhatsApp Error', 'Could not open WhatsApp on this device.');
+    alert('WhatsApp Error', 'Could not open WhatsApp on this device.');
   }
 };
 
 /**
  * Trigger Email Client
+ * @param {string} email
+ * @param {string} [subject]
+ * @param {Function} [onError] - optional branded alert callback: (title, msg) => void
  */
-export const sendEmail = async (email, subject = '') => {
+export const sendEmail = async (email, subject = '', onError) => {
+  const alert = onError || ((t, m) => Alert.alert(t, m));
   if (!email) {
-    Alert.alert('Email Missing', 'No email address available.');
+    alert('Email Missing', 'No email address available.');
     return;
   }
   const url = `mailto:${email}${subject ? `?subject=${encodeURIComponent(subject)}` : ''}`;
   try {
     await Linking.openURL(url);
   } catch (err) {
-    Alert.alert('Email Error', 'Could not launch email app.');
+    alert('Email Error', 'Could not launch email app.');
   }
 };

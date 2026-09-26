@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { colors } from '../../../shared/theme/colors.js';
 import { typography } from '../../../shared/theme/typography.js';
@@ -10,12 +10,14 @@ import { FluentInput } from '../../../shared/components/FluentInput.jsx';
 import { FluentButton } from '../../../shared/components/FluentButton.jsx';
 import { closeDropoffModal } from '../../../shared/store/uiSlice.js';
 import { useUpdateLeadStatusMutation } from '../api.js';
+import { useAlert } from '../../../shared/components/AppAlert.jsx';
 
 export const DropoffLostModal = () => {
   const dropoffData = useSelector((state) => state.ui.dropoffModalData);
   const visible = Boolean(dropoffData);
   const dispatch = useDispatch();
   const [updateStatus, { isLoading }] = useUpdateLeadStatusMutation();
+  const { showAlert, AlertComponent } = useAlert();
 
   const [mode, setMode] = useState(dropoffData?.defaultStage || 'lost'); // 'lost' | 'invalid'
   const [lostReason, setLostReason] = useState('Competitor Chosen (Price)');
@@ -33,7 +35,7 @@ export const DropoffLostModal = () => {
     try {
       if (mode === 'lost') {
         if (!lostReason.trim()) {
-          Alert.alert('Reason Required', 'Please provide a reason why this lead was lost.');
+          showAlert('error', 'Reason Required', 'Please provide a reason why this lead was lost.');
           return;
         }
         await updateStatus({
@@ -42,7 +44,7 @@ export const DropoffLostModal = () => {
           lost_reason: lostReason,
           remarks: remarks.trim() || undefined,
         }).unwrap();
-        Alert.alert('Lead Updated', 'Lead status has been updated to Lost.');
+        showAlert('success', 'Lead Updated', 'Lead status has been updated to Lost.');
       } else {
         await updateStatus({
           id: leadId,
@@ -50,24 +52,50 @@ export const DropoffLostModal = () => {
           invalid_reason: invalidReason,
           remarks: remarks.trim() || undefined,
         }).unwrap();
-        Alert.alert('Lead Updated', 'Lead status has been updated to Invalid.');
+        showAlert('success', 'Lead Updated', 'Lead status has been updated to Invalid.');
       }
 
       handleClose();
     } catch (err) {
       const msg = err?.data?.message || err?.message || 'Could not update status.';
-      Alert.alert('Update Failed', msg);
+      showAlert('error', 'Update Failed', msg);
     }
   };
 
   return (
-    <BottomSheet
+    <>
+      {AlertComponent}
+      <BottomSheet
       visible={visible}
       onClose={handleClose}
       title="⚠️ Mark Opportunity Drop-off"
       subtitle="Close opportunity with audit trail"
+      footer={
+        <View style={styles.actionsRow}>
+          <FluentButton
+            title="Cancel"
+            onPress={handleClose}
+            variant="secondary"
+            size="large"
+            style={styles.actionBtn}
+            disabled={isLoading}
+          />
+          <FluentButton
+            title={`Confirm as ${mode === 'lost' ? 'Lost' : 'Invalid'}`}
+            onPress={handleConfirm}
+            variant="danger"
+            size="large"
+            loading={isLoading}
+            style={styles.actionBtn}
+          />
+        </View>
+      }
     >
-      <View style={styles.formContainer}>
+      <ScrollView
+        contentContainerStyle={[styles.formContainer, { paddingBottom: 24 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {/* Toggle Mode */}
         <View style={styles.toggleRow}>
           <TouchableOpacity
@@ -116,27 +144,9 @@ export const DropoffLostModal = () => {
           multiline
           numberOfLines={3}
         />
-
-        <View style={styles.actionsRow}>
-          <FluentButton
-            title="Cancel"
-            onPress={handleClose}
-            variant="secondary"
-            size="large"
-            style={styles.actionBtn}
-            disabled={isLoading}
-          />
-          <FluentButton
-            title={`Confirm as ${mode === 'lost' ? 'Lost' : 'Invalid'}`}
-            onPress={handleConfirm}
-            variant="danger"
-            size="large"
-            loading={isLoading}
-            style={styles.actionBtn}
-          />
-        </View>
-      </View>
+      </ScrollView>
     </BottomSheet>
+    </>
   );
 };
 

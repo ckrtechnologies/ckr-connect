@@ -10,13 +10,16 @@ import { formatDate, formatTime } from '../../../shared/utils/formatters.js';
 export const AttendanceHistoryItem = ({ item }) => {
   const isWeekend = item.is_weekend;
   const isHoliday = item.status === 'holiday';
+  const isNotJoined = item.status === 'not_joined';
 
   return (
-    <FluentCard style={[styles.card, isWeekend && styles.weekendCard]}>
+    <FluentCard style={[styles.card, (isWeekend || isNotJoined) && styles.weekendCard]}>
       <View style={styles.leftCol}>
         <Text style={styles.dateText}>{formatDate(item.date)}</Text>
         <Text style={styles.timeDetails}>
-          {isHoliday
+          {isNotJoined
+            ? '— Prior to Date of Joining'
+            : isHoliday
             ? `🎉 ${item.holiday_name || 'Public Holiday'}`
             : isWeekend
             ? 'Sunday (Weekend Off)'

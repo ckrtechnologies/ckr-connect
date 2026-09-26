@@ -45,15 +45,17 @@ export const adminStaffRepository = {
         u.profile_photo_url AS avatar_url,
         u.is_active,
         u.sales_target AS target_amount,
+        COALESCE(ut.daily_call_target, 15)::int AS daily_call_target,
         u.force_password_reset,
         u.created_at,
         u.updated_at,
         COUNT(DISTINCT CASE WHEN l.status NOT IN ('won', 'lost', 'invalid') THEN l.id END)::int AS active_leads_count,
         COALESCE(SUM(CASE WHEN l.status = 'won' THEN l.won_amount ELSE 0 END), 0)::numeric AS lifetime_won_revenue
       FROM connect.users u
+      LEFT JOIN connect.user_targets ut ON ut.user_id = u.id
       LEFT JOIN connect.leads l ON u.id = l.assigned_to
       ${whereClause}
-      GROUP BY u.id
+      GROUP BY u.id, ut.daily_call_target
       ORDER BY u.role ASC, u.name ASC
     `;
 
@@ -77,6 +79,7 @@ export const adminStaffRepository = {
         u.profile_photo_url AS avatar_url,
         u.is_active,
         u.sales_target AS target_amount,
+        COALESCE(ut.daily_call_target, 15)::int AS daily_call_target,
         u.force_password_reset,
         u.created_at,
         u.updated_at,
@@ -84,9 +87,10 @@ export const adminStaffRepository = {
         COUNT(DISTINCT CASE WHEN l.status = 'won' THEN l.id END)::int AS total_won_leads,
         COALESCE(SUM(CASE WHEN l.status = 'won' THEN l.won_amount ELSE 0 END), 0)::numeric AS lifetime_won_revenue
       FROM connect.users u
+      LEFT JOIN connect.user_targets ut ON ut.user_id = u.id
       LEFT JOIN connect.leads l ON u.id = l.assigned_to
       WHERE u.id = $1
-      GROUP BY u.id
+      GROUP BY u.id, ut.daily_call_target
     `;
     const { rows } = await db.query(query, [id]);
     return rows[0] || null;
@@ -126,7 +130,14 @@ export const adminStaffRepository = {
       data.target_amount || data.sales_target || 0,
       data.date_of_joining || null
     ]);
-    return rows[0];
+    const createdUser = rows[0];
+    const targetDaily = parseInt(data.daily_call_target || 15, 10);
+    await db.query(
+      `INSERT INTO connect.user_targets (user_id, daily_call_target) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET daily_call_target = EXCLUDED.daily_call_target`,
+      [createdUser.id, targetDaily]
+    );
+    createdUser.daily_call_target = targetDaily;
+    return createdUser;
   },
 
   async update(id, data) {
@@ -171,6 +182,19 @@ export const adminStaffRepository = {
       values.push(data.is_active);
     }
 
+    if (data.daily_call_target !== undefined) {
+      const targetDaily = parseInt(data.daily_call_target, 10);
+      try {
+        await db.query(
+          `INSERT INTO connect.user_targets (user_id, daily_call_target) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET daily_call_target = EXCLUDED.daily_call_target, updated_at = NOW()`,
+          [id, targetDaily]
+        );
+      } catch (e) {}
+      try {
+        await db.query(`UPDATE connect.users SET daily_call_target = $1 WHERE id = $2`, [targetDaily, id]);
+      } catch (e) {}
+    }
+
     if (fields.length === 0) return await this.findById(id);
 
     fields.push(`updated_at = NOW()`);
@@ -182,8 +206,8 @@ export const adminStaffRepository = {
       WHERE id = $${idx}
       RETURNING id, employee_id, name, email, phone, designation, role, status, is_active, sales_target AS target_amount, updated_at
     `;
-    const { rows } = await db.query(query, values);
-    return rows[0];
+    await db.query(query, values);
+    return await this.findById(id);
   },
 
   async updatePassword(id, passwordHash) {

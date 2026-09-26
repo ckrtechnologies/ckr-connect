@@ -48,5 +48,20 @@ export const authController = {
     } catch (err) {
       next(err);
     }
+  },
+
+  async uploadAvatar(req, res, next) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, error: 'No image uploaded' });
+      }
+      
+      const avatarUrl = `/files/avatars/${req.file.filename}`;
+      const result = await authService.updateAvatar(req.user.id, avatarUrl);
+      
+      return successResponse(res, result, 'Avatar updated successfully');
+    } catch (err) {
+      next(err);
+    }
   }
 };

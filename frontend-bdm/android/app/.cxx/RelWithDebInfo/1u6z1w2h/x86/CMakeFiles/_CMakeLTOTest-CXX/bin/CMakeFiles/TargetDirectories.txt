@@ -1,0 +1,4 @@
+/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/RelWithDebInfo/1u6z1w2h/x86/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir
+/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/RelWithDebInfo/1u6z1w2h/x86/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir
+/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/RelWithDebInfo/1u6z1w2h/x86/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/edit_cache.dir
+/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/RelWithDebInfo/1u6z1w2h/x86/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/rebuild_cache.dir

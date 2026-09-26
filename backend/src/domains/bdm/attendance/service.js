@@ -33,10 +33,11 @@ export const bdmAttendanceService = {
     const m = month || new Date().getMonth() + 1;
 
     const daysInMonth = new Date(y, m, 0).getDate();
-    const [rawRecords, holidays] = await Promise.all([
-      bdmAttendanceRepository.getMyMonthlyRecords(bdmId, y, m),
-      bdmAttendanceRepository.getHolidaysForMonth(y, m)
-    ]);
+    const rawRecords = await bdmAttendanceRepository.getMyMonthlyRecords(bdmId, y, m);
+    const holidays = await bdmAttendanceRepository.getHolidaysForMonth(y, m);
+    const userJoining = await bdmAttendanceRepository.getUserJoiningDate(bdmId);
+
+    const effectiveJoiningDate = userJoining?.date_of_joining || userJoining?.created_date || null;
 
     const holidayMap = new Map();
     for (const h of holidays) {
@@ -79,6 +80,8 @@ export const bdmAttendanceService = {
         else if (status === 'half_day') summary.half_day++;
         else if (status === 'absent') summary.absent++;
         else if (status === 'on_leave') summary.on_leave++;
+      } else if (effectiveJoiningDate && dateStr < effectiveJoiningDate) {
+        status = 'not_joined';
       } else if (dateStr < todayIso) {
         status = 'absent';
         summary.absent++;

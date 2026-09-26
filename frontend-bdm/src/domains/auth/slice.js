@@ -29,8 +29,13 @@ export const authSlice = createSlice({
       state.user = null;
       state.isAuthenticated = false;
     },
+    updateUserAvatar: (state, action) => {
+      if (state.user) {
+        state.user.avatar_url = action.payload;
+      }
+    }
   },
 });
 
-export const { setCredentials, setOnboarded, setHydrated, logout } = authSlice.actions;
+export const { setCredentials, setOnboarded, setHydrated, logout, updateUserAvatar } = authSlice.actions;
 export default authSlice.reducer;

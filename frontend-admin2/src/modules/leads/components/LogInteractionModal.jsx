@@ -51,12 +51,27 @@ export default function LogInteractionModal({ isOpen, leadId, leadName, onClose,
     <div
       className="fluent-dialog-backdrop open"
       onClick={onClose}
-      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}
+      style={{
+        display: 'flex',
+        alignItems: 'stretch',
+        justifyContent: 'flex-end',
+        animation: 'fadeIn 0.15s ease',
+        zIndex: 1100,
+      }}
     >
       <div
-        className="fluent-dialog-box"
+        className="fluent-panel-drawer"
         onClick={(e) => e.stopPropagation()}
-        style={{ width: '520px', maxWidth: '92vw', padding: '20px' }}
+        style={{
+          width: '520px',
+          maxWidth: '100vw',
+          background: 'var(--color-surface)',
+          borderLeft: '1px solid var(--color-border)',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: 'var(--shadow-panel, -8px 0 24px rgba(0,0,0,0.15))',
+          height: '100%',
+        }}
       >
         <div
           style={{
@@ -64,8 +79,8 @@ export default function LogInteractionModal({ isOpen, leadId, leadName, onClose,
             justifyContent: 'space-between',
             alignItems: 'center',
             borderBottom: '1px solid var(--color-border)',
-            paddingBottom: '12px',
-            marginBottom: '16px',
+            padding: '20px 24px',
+            background: 'var(--color-surface-alt)',
           }}
         >
           <div>
@@ -81,7 +96,9 @@ export default function LogInteractionModal({ isOpen, leadId, leadName, onClose,
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ flex: 1, overflowY: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {/* Activity Type Buttons */}
           <div className="form-field-group">
             <label className="form-field-label">Interaction Channel *</label>
@@ -153,12 +170,12 @@ export default function LogInteractionModal({ isOpen, leadId, leadName, onClose,
           </div>
 
           {/* Discussion Notes */}
-          <div className="form-field-group">
+          <div className="form-field-group" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <label className="form-field-label">Discussion Notes & Summary *</label>
             <textarea
               className="form-field-textarea"
               placeholder="Detail key points discussed, client questions, pricing talks..."
-              rows={3}
+              style={{ flex: 1, resize: 'none' }}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               required
@@ -188,34 +205,37 @@ export default function LogInteractionModal({ isOpen, leadId, leadName, onClose,
             </div>
           </div>
 
-          {/* Footer actions */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '8px',
-              borderTop: '1px solid var(--color-border)',
-              paddingTop: '14px',
-              marginTop: '4px',
-            }}
-          >
-            <button
-              type="button"
-              className="fluent-btn fluent-btn-secondary"
-              onClick={onClose}
-              disabled={isSubmitting}
+            </div>
+            
+            {/* Footer actions */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '8px',
+                borderTop: '1px solid var(--color-border)',
+                padding: '16px 24px',
+                background: 'var(--color-surface-alt)',
+              }}
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="fluent-btn fluent-btn-primary"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Logging...' : 'Save Activity'}
-            </button>
-          </div>
-        </form>
+              <button
+                type="button"
+                className="fluent-btn fluent-btn-secondary"
+                onClick={onClose}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="fluent-btn fluent-btn-primary"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Logging...' : 'Save Activity'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

@@ -64,6 +64,14 @@ export const StatusBadge = ({ status, label = null, style = null }) => {
           border: '#C7E0F4',
           displayLabel: label || 'Holiday',
         };
+      case 'not_joined':
+      case 'pre_joining':
+        return {
+          bg: '#F3F2F1',
+          text: '#605E5C',
+          border: '#E1DFDD',
+          displayLabel: label || 'Joined Later',
+        };
       case 'new':
       default:
         return {

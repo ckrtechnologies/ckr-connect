@@ -6,29 +6,55 @@ import { spacing } from '../../../shared/theme/spacing.js';
 
 export const PunchHeroButton = ({
   isPunchedIn = false,
+  isPunchedOut = false,
   onPress,
   loading = false,
 }) => {
+  const getButtonContent = () => {
+    if (isPunchedOut) {
+      return {
+        icon: '✓',
+        label: 'SHIFT COMPLETED',
+        btnStyle: styles.completedBtn,
+        disabled: true,
+      };
+    }
+    if (isPunchedIn) {
+      return {
+        icon: '⏹',
+        label: 'PUNCH OUT',
+        btnStyle: styles.punchedInBtn,
+        disabled: false,
+      };
+    }
+    return {
+      icon: '▶',
+      label: 'PUNCH IN',
+      btnStyle: styles.punchedOutBtn,
+      disabled: false,
+    };
+  };
+
+  const config = getButtonContent();
+
   return (
     <View style={styles.outerGlow}>
       <TouchableOpacity
         style={[
           styles.circleBtn,
-          isPunchedIn ? styles.punchedInBtn : styles.punchedOutBtn,
-          loading && styles.btnDisabled,
+          config.btnStyle,
+          (loading || config.disabled) && styles.btnDisabled,
         ]}
         onPress={onPress}
-        disabled={loading}
+        disabled={loading || config.disabled}
         activeOpacity={0.8}
       >
         {loading ? (
           <ActivityIndicator size="large" color={colors.textOnPrimary} />
         ) : (
           <View style={styles.content}>
-            <Text style={styles.icon}>{isPunchedIn ? '⏹' : '▶'}</Text>
-            <Text style={styles.label}>
-              {isPunchedIn ? 'PUNCH OUT' : 'PUNCH IN'}
-            </Text>
+            <Text style={styles.icon}>{config.icon}</Text>
+            <Text style={styles.label}>{config.label}</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -67,8 +93,12 @@ const styles = StyleSheet.create({
   punchedInBtn: {
     backgroundColor: colors.error,
   },
+  completedBtn: {
+    backgroundColor: colors.success,
+    borderColor: 'rgba(255, 255, 255, 0.6)',
+  },
   btnDisabled: {
-    opacity: 0.6,
+    opacity: 0.85,
   },
   content: {
     alignItems: 'center',
@@ -80,9 +110,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   label: {
-    ...typography.title,
+    ...typography.captionBold,
     color: colors.textOnPrimary,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
+    textAlign: 'center',
   },
 });

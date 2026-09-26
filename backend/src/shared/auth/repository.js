@@ -11,7 +11,7 @@ export const authRepository = {
   async findByIdentifier(identifier) {
     const text = `
       SELECT id, employee_id, name, email, phone, password_hash, role, designation, department,
-             status, is_active, force_password_reset, has_seen_onboarding, sales_target
+             status, is_active, force_password_reset, has_seen_onboarding, sales_target, profile_photo_url
       FROM connect.users
       WHERE (LOWER(email) = LOWER($1) OR UPPER(employee_id) = UPPER($1))
       LIMIT 1;
@@ -27,7 +27,7 @@ export const authRepository = {
   async findById(id) {
     const text = `
       SELECT id, employee_id, name, email, phone, password_hash, role, designation, department,
-             status, is_active, force_password_reset, has_seen_onboarding, sales_target
+             status, is_active, force_password_reset, has_seen_onboarding, sales_target, profile_photo_url
       FROM connect.users
       WHERE id = $1
       LIMIT 1;
@@ -67,6 +67,18 @@ export const authRepository = {
       RETURNING id, employee_id, has_seen_onboarding;
     `;
     const res = await query(text, [userId]);
+    return res.rows[0] || null;
+  },
+
+  async updateAvatar(userId, avatarUrl) {
+    const text = `
+      UPDATE connect.users
+      SET profile_photo_url = $2,
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING id, employee_id, profile_photo_url;
+    `;
+    const res = await query(text, [userId, avatarUrl]);
     return res.rows[0] || null;
   }
 };

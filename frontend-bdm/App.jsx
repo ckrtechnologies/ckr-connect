@@ -9,6 +9,7 @@ import { QuickAddLeadModal } from './src/domains/leads/components/QuickAddLeadMo
 import { CloseDealWonModal } from './src/domains/leads/components/CloseDealWonModal.jsx';
 import { DropoffLostModal } from './src/domains/leads/components/DropoffLostModal.jsx';
 import { initSocket, disconnectSocket } from './src/domains/notifications/socket.js';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { colors } from './src/shared/theme/colors.js';
 
 const AppContent = () => {
@@ -45,9 +46,11 @@ export default function App() {
   return (
     <Provider store={store}>
       <SafeAreaProvider>
-        <ErrorBoundary>
-          <AppContent />
-        </ErrorBoundary>
+        <KeyboardProvider statusBarTranslucent>
+          <ErrorBoundary>
+            <AppContent />
+          </ErrorBoundary>
+        </KeyboardProvider>
       </SafeAreaProvider>
     </Provider>
   );

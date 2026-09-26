@@ -7,6 +7,20 @@ export const leadsApi = baseApi.injectEndpoints({
         url: '/bdm/leads',
         params,
       }),
+      serializeQueryArgs: ({ endpointName, queryArgs }) => {
+        const { page, ...rest } = queryArgs;
+        return { endpointName, ...rest };
+      },
+      merge: (currentCache, newItems, { arg }) => {
+        if (arg.page === 1 || !arg.page) {
+          return newItems;
+        }
+        currentCache.items.push(...newItems.items);
+        currentCache.pagination = newItems.pagination;
+      },
+      forceRefetch({ currentArg, previousArg }) {
+        return currentArg !== previousArg;
+      },
       providesTags: ['Leads'],
     }),
     getLeadDetail: builder.query({
@@ -22,10 +36,10 @@ export const leadsApi = baseApi.injectEndpoints({
       invalidatesTags: ['Leads', 'Dashboard'],
     }),
     updateLeadStatus: builder.mutation({
-      query: ({ id, status, remarks, lost_reason, invalid_reason, won_amount }) => ({
+      query: ({ id, status, remarks, lost_reason, invalid_reason, won_amount, next_followup_date }) => ({
         url: `/bdm/leads/${id}/status`,
         method: 'PATCH',
-        body: { status, remarks, lost_reason, invalid_reason, won_amount },
+        body: { status, remarks, lost_reason, invalid_reason, won_amount, next_followup_date },
       }),
       invalidatesTags: (result, error, { id }) => [
         'Leads',
@@ -34,12 +48,19 @@ export const leadsApi = baseApi.injectEndpoints({
       ],
     }),
     uploadBrd: builder.mutation({
-      query: ({ id, formData }) => ({
+      query: ({ id, formData, body }) => ({
         url: `/bdm/leads/${id}/upload-brd`,
         method: 'POST',
-        body: formData,
+        body: formData || body,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Lead', id }],
+      invalidatesTags: (result, error, { id }) => [{ type: 'Lead', id }, 'Leads'],
+    }),
+    deleteDocument: builder.mutation({
+      query: ({ leadId, docId }) => ({
+        url: `/bdm/leads/${leadId}/documents/${docId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (result, error, { leadId }) => [{ type: 'Lead', id: leadId }, 'Leads'],
     }),
     logInteraction: builder.mutation({
       query: (body) => ({
@@ -54,6 +75,18 @@ export const leadsApi = baseApi.injectEndpoints({
         { type: 'Lead', id: lead_id },
       ],
     }),
+    updateLeadDetails: builder.mutation({
+      query: ({ id, ...body }) => ({
+        url: `/bdm/leads/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        'Dashboard',
+        'Leads',
+        { type: 'Lead', id },
+      ],
+    }),
   }),
   overrideExisting: false,
 });
@@ -64,5 +97,7 @@ export const {
   useCreateBdmLeadMutation,
   useUpdateLeadStatusMutation,
   useUploadBrdMutation,
+  useDeleteDocumentMutation,
   useLogInteractionMutation,
+  useUpdateLeadDetailsMutation,
 } = leadsApi;

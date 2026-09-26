@@ -12,6 +12,7 @@ export const ROUTES = {
   MY_LEADS: 'MyLeads',
   ATTENDANCE: 'Attendance',
   NOTIFICATIONS: 'Notifications',
+  PROFILE: 'Profile',
 
   // Stack Details & Forms
   LEAD_DETAIL: 'LeadDetail',

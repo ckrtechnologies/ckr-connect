@@ -42,3 +42,18 @@ export const uploadCsv = multer({
   }
 });
 
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(secrets.files.dir, 'avatars');
+    fs.mkdirSync(uploadPath, { recursive: true });
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    cb(null, `avatar-${req.user.id}-${Date.now()}${path.extname(file.originalname)}`);
+  }
+});
+
+export const uploadAvatar = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }
+});

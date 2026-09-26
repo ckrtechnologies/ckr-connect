@@ -39,7 +39,7 @@ export const PipelineMatrixGrid = ({
         {/* Untouched Card */}
         <TouchableOpacity
           style={[styles.card, styles.untouchedCard]}
-          onPress={() => onSelectStage('NEW')}
+          onPress={() => onSelectStage('new')}
           activeOpacity={0.8}
         >
           <View style={styles.cardTop}>
@@ -53,7 +53,7 @@ export const PipelineMatrixGrid = ({
         {/* Follow-ups Due Card */}
         <TouchableOpacity
           style={[styles.card, { borderLeftColor: colors.warning, borderLeftWidth: 4 }]}
-          onPress={() => onSelectStage('FOLLOW_UP')}
+          onPress={() => onSelectStage('follow_up')}
           activeOpacity={0.8}
         >
           <View style={styles.cardTop}>
@@ -67,7 +67,7 @@ export const PipelineMatrixGrid = ({
         {/* Contacted Card */}
         <TouchableOpacity
           style={[styles.card, { borderLeftColor: colors.info, borderLeftWidth: 4 }]}
-          onPress={() => onSelectStage('CONTACTED')}
+          onPress={() => onSelectStage('contacted')}
           activeOpacity={0.8}
         >
           <View style={styles.cardTop}>
@@ -81,7 +81,7 @@ export const PipelineMatrixGrid = ({
         {/* Proposal Card */}
         <TouchableOpacity
           style={[styles.card, { borderLeftColor: '#8E44AD', borderLeftWidth: 4 }]}
-          onPress={() => onSelectStage('PROPOSAL')}
+          onPress={() => onSelectStage('proposal')}
           activeOpacity={0.8}
         >
           <View style={styles.cardTop}>
@@ -95,7 +95,7 @@ export const PipelineMatrixGrid = ({
         {/* Won Card */}
         <TouchableOpacity
           style={[styles.card, styles.wonCard]}
-          onPress={() => onSelectStage('WON')}
+          onPress={() => onSelectStage('won')}
           activeOpacity={0.8}
         >
           <View style={styles.cardTop}>

@@ -11,10 +11,10 @@ import { formatLakhs } from '../../../shared/utils/formatters.js';
 export const PerformanceTab = ({
   kpis = {},
 }) => {
-  const wonRevenue = Number(kpis.won_revenue) || 450000;
-  const weightedPipeline = Number(kpis.weighted_pipeline) || 416000;
-  const avgDealSize = Number(kpis.avg_deal_size) || 450000;
-  const conversionRate = Number(kpis.conversion_rate) || 25;
+  const wonRevenue = Number(kpis.won_revenue) || 0;
+  const weightedPipeline = Number(kpis.weighted_pipeline) || 0;
+  const avgDealSize = Number(kpis.avg_deal_size) || 0;
+  const conversionRate = Number(kpis.conversion_rate) || 0;
 
   return (
     <View style={styles.container}>

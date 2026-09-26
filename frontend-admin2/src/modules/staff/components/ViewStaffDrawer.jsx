@@ -134,6 +134,13 @@ export default function ViewStaffDrawer({
               </div>
 
               <div style={{ background: 'var(--color-surface-alt)', padding: '14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}>
+                <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '4px' }}>Daily Calling Target</div>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                  {staff.daily_call_target ?? 15} <span style={{ fontSize: '12px', fontWeight: 400 }}>calls/day</span>
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--color-surface-alt)', padding: '14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}>
                 <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '4px' }}>Active Pipeline Leads</div>
                 <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-primary)' }}>
                   {staff.active_leads_count ?? 0}

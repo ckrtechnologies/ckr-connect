@@ -128,6 +128,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     marginLeft: spacing.xs,
     marginBottom: spacing.sm,
+    overflow: 'hidden',
   },
   genesisCard: {
     backgroundColor: '#FAFAFA',
@@ -139,6 +140,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     flexWrap: 'wrap',
+    gap: 4,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -163,6 +165,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 0.5,
     borderColor: '#C7E0F4',
+    maxWidth: '50%',
   },
   outcomeText: {
     ...typography.overline,
@@ -182,6 +185,7 @@ const styles = StyleSheet.create({
     padding: spacing.xs + 2,
     borderRadius: radius.xs,
     marginTop: spacing.xs,
+    overflow: 'hidden',
   },
   notesText: {
     ...typography.body,
@@ -191,15 +195,19 @@ const styles = StyleSheet.create({
   },
   nextActionRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginTop: spacing.xs,
+    overflow: 'hidden',
   },
   nextActionLabel: {
     ...typography.captionBold,
     color: colors.primary,
+    flexShrink: 0,
   },
   nextActionVal: {
     ...typography.caption,
     color: colors.textPrimary,
+    flex: 1,
+    flexWrap: 'wrap',
   },
 });

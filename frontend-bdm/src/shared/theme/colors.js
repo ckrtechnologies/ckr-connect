@@ -25,9 +25,9 @@ export const colors = {
   borderSubtle: '#F3F2F1',
 
   // Typography
-  textPrimary: '#201F1E',
-  textSecondary: '#605E5C',
-  textDisabled: '#A19F9D',
+  textPrimary: '#201F1E',      // Near-black — unchanged, already strong
+  textSecondary: '#3B3A39',   // was #605E5C — darkened for label legibility
+  textDisabled: '#797775',    // was #A19F9D — darker placeholder, still visually distinct
   textOnPrimary: '#FFFFFF',
 
   // Status Indicators

@@ -43,7 +43,7 @@ export const mediaService = {
         }
         if (selectedDoc) {
           filePath = path.resolve(process.cwd(), selectedDoc.file_path || selectedDoc.url);
-          fileName = selectedDoc.file_name || selectedDoc.original_name || path.basename(filePath);
+          fileName = selectedDoc.file_name || selectedDoc.name || selectedDoc.original_name || path.basename(filePath);
         }
       } catch (e) {
         // Fallback to direct path

@@ -5,10 +5,9 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  TouchableWithoutFeedback,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { colors } from '../theme/colors.js';
 import { typography } from '../theme/typography.js';
 import { spacing } from '../theme/spacing.js';
@@ -20,6 +19,7 @@ export const BottomSheet = ({
   title,
   subtitle = null,
   children,
+  footer = null,
 }) => {
   return (
     <Modal
@@ -30,13 +30,15 @@ export const BottomSheet = ({
       onRequestClose={onClose}
     >
       <View style={styles.backdrop}>
+        {/* Top Dismissable Backdrop Area (flex: 1 above sheet, never overlaps content) */}
         <TouchableOpacity
-          style={StyleSheet.absoluteFill}
+          style={styles.backdropTop}
           activeOpacity={1}
           onPress={onClose}
         />
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
+          keyboardVerticalOffset={0}
           style={styles.sheet}
         >
           <View style={styles.handleBar} />
@@ -56,6 +58,7 @@ export const BottomSheet = ({
             </TouchableOpacity>
           </View>
           <View style={styles.content}>{children}</View>
+          {footer ? <View style={styles.footerContainer}>{footer}</View> : null}
         </KeyboardAvoidingView>
       </View>
     </Modal>
@@ -68,13 +71,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
     justifyContent: 'flex-end',
   },
+  backdropTop: {
+    flex: 1,
+  },
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxxl,
-    maxHeight: '90%',
+    maxHeight: '92%',
+    display: 'flex',
+    zIndex: 10,
+    elevation: 24,
   },
   handleBar: {
     width: 40,
@@ -121,5 +129,15 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingTop: spacing.md,
+    flexShrink: 1,
+  },
+  footerContainer: {
+    paddingTop: spacing.sm,
+    paddingBottom: Platform.OS === 'ios' ? spacing.xl : spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.surface,
+    zIndex: 20,
+    elevation: 24,
   },
 });

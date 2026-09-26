@@ -8,11 +8,16 @@ import { errorResponse } from '../utils/response.js';
  */
 export const authenticate = (req, res, next) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return errorResponse(res, 'Authentication token missing or invalid', 'UNAUTHORIZED', 401);
+  let token;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.query && req.query.token) {
+    token = req.query.token;
   }
 
-  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return errorResponse(res, 'Authentication token missing or invalid', 'UNAUTHORIZED', 401);
+  }
   try {
     const decoded = jwt.verify(token, secrets.jwt.secret);
     req.user = decoded;
