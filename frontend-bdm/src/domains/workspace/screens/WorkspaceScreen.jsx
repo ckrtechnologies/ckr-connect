@@ -10,7 +10,6 @@ import {
   Image,
   Platform,
 } from 'react-native';
-import DocumentPicker from '@react-native-documents/picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { colors } from '../../../shared/theme/colors.js';
@@ -24,12 +23,11 @@ import { PipelineMatrixGrid } from '../components/PipelineMatrixGrid.jsx';
 import { CallingTargetCard } from '../components/CallingTargetCard.jsx';
 import { CallLedgerFeed } from '../components/CallLedgerFeed.jsx';
 import { FunnelTab } from '../components/FunnelTab.jsx';
-import { PerformanceTab } from '../components/PerformanceTab.jsx';
+import { FollowupsTab } from '../components/FollowupsTab.jsx';
 import { useGetBdmDashboardQuery } from '../api.js';
 import { setQuickAddModalOpen } from '../../../shared/store/uiSlice.js';
 import { ROUTES } from '../../../shared/navigation/routes.js';
 import { logout, updateUserAvatar } from '../../auth/slice.js';
-import { useUploadAvatarMutation } from '../../auth/api.js';
 import { storage } from '../../../shared/utils/storage.js';
 import { API_BASE_URL } from '../../../shared/store/baseApi.js';
 import { useAlert } from '../../../shared/components/AppAlert.jsx';
@@ -40,7 +38,6 @@ export const WorkspaceScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const currentUser = useSelector((state) => state.auth.user);
   const { showAlert, AlertComponent } = useAlert();
-  const [uploadAvatar, { isLoading: isUploadingAvatar }] = useUploadAvatarMutation();
 
   const kpis = dashboardData?.kpis || {};
   const recentActivities = dashboardData?.recent_activities || [];
@@ -62,6 +59,17 @@ export const WorkspaceScreen = ({ navigation }) => {
     totalValue: Number(kpis.total_pipeline_value) || 0,
   };
 
+  // Filter recent activities to only today's for the ledger feed
+  const todayDate = new Date();
+  const todayStr = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}-${String(todayDate.getDate()).padStart(2, '0')}`;
+
+  const todayInteractionsFeed = recentActivities.filter((i) => {
+    if (!i.created_at) return false;
+    const d = new Date(i.created_at);
+    const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return dStr === todayStr;
+  });
+
   const handleOpenLead = (leadId) => {
     navigation.navigate(ROUTES.LEAD_DETAIL, { leadId });
   };
@@ -81,56 +89,28 @@ export const WorkspaceScreen = ({ navigation }) => {
     });
   };
 
-  const handleUploadDP = async () => {
-    try {
-      const res = await DocumentPicker.pickSingle({
-        type: [DocumentPicker.types.images],
-      });
-      const formData = new FormData();
-      formData.append('avatar', {
-        uri: Platform.OS === 'ios' ? res.uri.replace('file://', '') : res.uri,
-        type: res.type || 'image/jpeg',
-        name: res.name || 'avatar.jpg',
-      });
-      const uploadRes = await uploadAvatar(formData).unwrap();
-      if (uploadRes.success && uploadRes.data?.profile_photo_url) {
-        dispatch(updateUserAvatar(uploadRes.data.profile_photo_url));
-        showAlert('success', 'Profile Picture Updated', 'Your display picture has been updated successfully.');
-      }
-    } catch (err) {
-      if (!DocumentPicker.isCancel(err)) {
-        showAlert('error', 'Upload Failed', err?.data?.message || err?.message || 'Could not upload display picture.');
-      }
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {AlertComponent}
       {/* Top Header Bar */}
       <View style={styles.topBar}>
         <View style={styles.brandRow}>
-          <TouchableOpacity 
-            style={styles.brandIconMini} 
-            onPress={handleUploadDP}
-            disabled={isUploadingAvatar}
-          >
+          <View style={styles.brandIconMini}>
             {currentUser?.avatar_url ? (
               <Image 
                 source={{ uri: `${API_BASE_URL}${currentUser.avatar_url}` }} 
                 style={styles.avatarImage} 
+                onError={(e) => {
+                  console.log('Image Load Error Workspace:', e.nativeEvent.error);
+                  showAlert('error', 'Image Error', `Failed to load: ${API_BASE_URL}${currentUser.avatar_url}`);
+                }}
               />
             ) : (
               <Text style={styles.brandIconMiniText}>
                 {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'CKR'}
               </Text>
             )}
-            {isUploadingAvatar && (
-              <View style={styles.avatarLoadingOverlay}>
-                <ActivityIndicator size="small" color="#fff" />
-              </View>
-            )}
-          </TouchableOpacity>
+          </View>
           <View>
             <Text style={styles.topBarTitle}>My Workspace</Text>
             <Text style={styles.topBarSubtitle}>
@@ -192,14 +172,14 @@ export const WorkspaceScreen = ({ navigation }) => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.tabItem, activeSubTab === 'performance' && styles.tabItemActive]}
-            onPress={() => setActiveSubTab('performance')}
+            style={[styles.tabItem, activeSubTab === 'followups' && styles.tabItemActive]}
+            onPress={() => setActiveSubTab('followups')}
             activeOpacity={0.8}
           >
             <Text
-              style={[styles.tabText, activeSubTab === 'performance' && styles.tabTextActive]}
+              style={[styles.tabText, activeSubTab === 'followups' && styles.tabTextActive]}
             >
-              My Performance
+              Follow-ups
             </Text>
           </TouchableOpacity>
         </View>
@@ -269,7 +249,7 @@ export const WorkspaceScreen = ({ navigation }) => {
 
             {/* 6. Today's Call Ledger & Results Feed */}
             <CallLedgerFeed
-              interactions={recentActivities}
+              interactions={todayInteractionsFeed}
               onSelectLead={handleOpenLead}
             />
           </>
@@ -285,9 +265,13 @@ export const WorkspaceScreen = ({ navigation }) => {
             overdueLeads={overdueLeads}
             onOpenLead={handleOpenLead}
           />
-        ) : (
-          <PerformanceTab kpis={kpis} />
-        )}
+        ) : activeSubTab === 'followups' ? (
+          <FollowupsTab
+            overdueLeads={overdueLeads}
+            todayFollowups={todayFollowups}
+            onOpenLead={handleOpenLead}
+          />
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

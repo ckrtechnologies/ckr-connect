@@ -79,7 +79,7 @@ export const bdmLeadsRepository = {
     }
 
     const whereClause = `WHERE ${conditions.join(' AND ')}`;
-    const safeSortFields = ['created_at', 'updated_at', 'name', 'expected_value', 'won_amount', 'status'];
+    const safeSortFields = ['created_at', 'updated_at', 'name', 'expected_value', 'won_amount', 'status', 'next_followup_date'];
     const sortField = safeSortFields.includes(sort_by) ? `l.${sort_by}` : 'l.created_at';
     const sortDir = sort_order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 

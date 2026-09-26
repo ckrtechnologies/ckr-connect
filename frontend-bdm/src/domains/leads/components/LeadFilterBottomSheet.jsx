@@ -50,6 +50,8 @@ export const FILTER_OPTIONS = {
     { id: 'created_asc', label: 'Oldest First', sortBy: 'created_at', sortOrder: 'ASC' },
     { id: 'value_desc', label: 'Deal Value: High to Low', sortBy: 'expected_value', sortOrder: 'DESC' },
     { id: 'value_asc', label: 'Deal Value: Low to High', sortBy: 'expected_value', sortOrder: 'ASC' },
+    { id: 'followup_asc', label: 'Follow-up: Soonest First', sortBy: 'next_followup_date', sortOrder: 'ASC' },
+    { id: 'followup_desc', label: 'Follow-up: Furthest First', sortBy: 'next_followup_date', sortOrder: 'DESC' },
   ],
 };
 

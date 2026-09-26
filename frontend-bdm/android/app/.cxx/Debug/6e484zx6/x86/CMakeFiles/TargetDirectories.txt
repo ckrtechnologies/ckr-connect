@@ -7,6 +7,9 @@
 /Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86/rndocumentpickerCGen_autolinked_build/CMakeFiles/react_codegen_rndocumentpickerCGen.dir
 /Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86/rndocumentpickerCGen_autolinked_build/CMakeFiles/edit_cache.dir
 /Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86/rndocumentpickerCGen_autolinked_build/CMakeFiles/rebuild_cache.dir
+/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86/RNImagePickerSpec_autolinked_build/CMakeFiles/react_codegen_RNImagePickerSpec.dir
+/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86/RNImagePickerSpec_autolinked_build/CMakeFiles/edit_cache.dir
+/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86/RNImagePickerSpec_autolinked_build/CMakeFiles/rebuild_cache.dir
 /Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86/RNKC_autolinked_build/CMakeFiles/react_codegen_RNKC.dir
 /Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86/RNKC_autolinked_build/CMakeFiles/edit_cache.dir
 /Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86/RNKC_autolinked_build/CMakeFiles/rebuild_cache.dir

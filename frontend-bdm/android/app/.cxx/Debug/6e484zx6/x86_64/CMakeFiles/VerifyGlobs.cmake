@@ -60,6 +60,30 @@ if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
   file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
 endif()
 
+# react_codegen_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-image-picker/android/build/generated/source/codegen/jni/CMakeLists.txt:9 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-image-picker/android/build/generated/source/codegen/jni/*.cpp")
+set(OLD_GLOB
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-image-picker/android/build/generated/source/codegen/jni/RNImagePickerSpec-generated.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
+endif()
+
+# react_codegen_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-image-picker/android/build/generated/source/codegen/jni/CMakeLists.txt:9 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-image-picker/android/build/generated/source/codegen/jni/react/renderer/components/RNImagePickerSpec/*.cpp")
+set(OLD_GLOB
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-image-picker/android/build/generated/source/codegen/jni/react/renderer/components/RNImagePickerSpec/ComponentDescriptors.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-image-picker/android/build/generated/source/codegen/jni/react/renderer/components/RNImagePickerSpec/EventEmitters.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-image-picker/android/build/generated/source/codegen/jni/react/renderer/components/RNImagePickerSpec/Props.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-image-picker/android/build/generated/source/codegen/jni/react/renderer/components/RNImagePickerSpec/ShadowNodes.cpp"
+  "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-image-picker/android/build/generated/source/codegen/jni/react/renderer/components/RNImagePickerSpec/States.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/Debug/6e484zx6/x86_64/CMakeFiles/cmake.verify_globs")
+endif()
+
 # LIB_CUSTOM_SRCS at /Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/CMakeLists.txt:23 (file)
 file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/chandanmallik/projects/ckrcrm/frontend-bdm/node_modules/react-native-keyboard-controller/android/src/main/jni/*.cpp")
 set(OLD_GLOB

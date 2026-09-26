@@ -37,12 +37,18 @@ app.get(['/health', '/api/health', '/api/v1/health'], (req, res) => {
   });
 });
 
+import path from 'path';
+import { secrets } from './config/secrets.js';
+
 // Domain and Shared API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/bootstrap', bootstrapRoutes);
 app.use('/api/v1/media', mediaRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/bdm', bdmRoutes);
+
+// Static files server for user uploads (like avatars and BRDs)
+app.use('/api/v1/files', express.static(path.resolve(secrets.files.dir)));
 
 // 404 Not Found Handler
 app.use((req, res) => {

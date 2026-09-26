@@ -38,6 +38,7 @@ export const LeadDetailScreen = ({ route, navigation }) => {
   const { leadId } = route.params;
   const dispatch = useDispatch();
   const token = useSelector((state) => state.auth?.token);
+  const currentUser = useSelector((state) => state.auth?.user);
 
   const { data: lead, isLoading, refetch } = useGetLeadDetailQuery(leadId);
   const [updateStatus, { isLoading: isUpdatingStatus }] = useUpdateLeadStatusMutation();
@@ -372,7 +373,7 @@ export const LeadDetailScreen = ({ route, navigation }) => {
               </View>
             ) : null}
 
-            <LeadSpecsTable lead={lead} interactionCount={interactions.length} />
+            <LeadSpecsTable lead={lead} interactionCount={interactions.length} currentUser={currentUser} />
 
             {/* Attached Documents & BRDs ({leadDocuments.length}) */}
             <View style={styles.brdSection}>

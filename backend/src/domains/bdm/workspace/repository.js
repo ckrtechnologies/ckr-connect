@@ -66,8 +66,8 @@ export const bdmWorkspaceRepository = {
     // 4. Stage matrix breakdown & counts
     const stagesRes = await db.query(
       `SELECT 
-         COUNT(CASE WHEN status = 'new' AND followup_count = 0 THEN 1 END)::int AS untouched_leads_count,
-         COALESCE(SUM(CASE WHEN status = 'new' AND followup_count = 0 THEN expected_value ELSE 0 END), 0)::numeric AS untouched_pipeline_value,
+         COUNT(CASE WHEN status = 'new' THEN 1 END)::int AS untouched_leads_count,
+         COALESCE(SUM(CASE WHEN status = 'new' THEN expected_value ELSE 0 END), 0)::numeric AS untouched_pipeline_value,
          COUNT(CASE WHEN status = 'contacted' THEN 1 END)::int AS contacted_leads_count,
          COALESCE(SUM(CASE WHEN status = 'contacted' THEN expected_value ELSE 0 END), 0)::numeric AS contacted_pipeline_value,
          COUNT(CASE WHEN status = 'follow_up' THEN 1 END)::int AS followup_leads_count,

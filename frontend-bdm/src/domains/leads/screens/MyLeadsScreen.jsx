@@ -58,6 +58,10 @@ export const MyLeadsScreen = ({ navigation, route }) => {
         return { sort_by: 'expected_value', sort_order: 'DESC' };
       case 'value_asc':
         return { sort_by: 'expected_value', sort_order: 'ASC' };
+      case 'followup_asc':
+        return { sort_by: 'next_followup_date', sort_order: 'ASC' };
+      case 'followup_desc':
+        return { sort_by: 'next_followup_date', sort_order: 'DESC' };
       case 'created_desc':
       default:
         return { sort_by: 'created_at', sort_order: 'DESC' };
@@ -112,7 +116,7 @@ export const MyLeadsScreen = ({ navigation, route }) => {
       if (stageFilter && stageFilter !== 'all') {
         const leadStatus = (l.status || '').toLowerCase().replace(/-/g, '_');
         if (stageFilter === 'new') {
-          if (leadStatus !== 'new' || l.followup_count > 0) return false;
+          if (leadStatus !== 'new') return false;
         } else if (stageFilter === 'follow_up') {
           if (leadStatus !== 'follow_up' && !l.next_followup_date) return false;
         } else if (leadStatus !== stageFilter) {

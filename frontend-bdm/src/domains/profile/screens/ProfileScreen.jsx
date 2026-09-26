@@ -5,7 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  Platform,
+  Alert,
 } from 'react-native';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { colors } from '../../../shared/theme/colors.js';
@@ -14,9 +19,11 @@ import { spacing } from '../../../shared/theme/spacing.js';
 import { radius } from '../../../shared/theme/radius.js';
 import { FluentCard } from '../../../shared/components/FluentCard.jsx';
 import { FluentButton } from '../../../shared/components/FluentButton.jsx';
-import { logout } from '../../auth/slice.js';
-import { storage } from '../../../shared/utils/storage.js';
+import { logout, updateUserAvatar } from '../../auth/slice.js';
+import { useUploadAvatarMutation } from '../../auth/api.js';
+import { API_BASE_URL } from '../../../shared/store/baseApi.js';
 import { ROUTES } from '../../../shared/navigation/routes.js';
+import { storage } from '../../../shared/utils/storage.js';
 import { formatDate, formatCurrency } from '../../../shared/utils/formatters.js';
 import { useAlert } from '../../../shared/components/AppAlert.jsx';
 
@@ -24,6 +31,7 @@ export const ProfileScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth?.user) || {};
   const { showAlert, AlertComponent } = useAlert();
+  const [uploadAvatar, { isLoading: isUploadingAvatar }] = useUploadAvatarMutation();
 
   const handleLogout = () => {
     showAlert('confirm', 'Sign Out', 'Are you sure you want to sign out of CKR Connect Sales?', {
@@ -48,6 +56,57 @@ export const ProfileScreen = ({ navigation }) => {
     .slice(0, 2)
     .join('') || 'BD';
 
+  const handleUploadDP = () => {
+    Alert.alert(
+      'Update Profile Picture',
+      'Choose an option to update your display picture:',
+      [
+        {
+          text: 'Take Photo',
+          onPress: () => launchCamera({ mediaType: 'photo', quality: 0.8 }, handleImageResponse),
+        },
+        {
+          text: 'Choose from Gallery',
+          onPress: () => launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, handleImageResponse),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const handleImageResponse = async (res) => {
+    if (res.didCancel) return;
+    if (res.errorCode) {
+      showAlert('error', 'Error', res.errorMessage || 'Camera/Gallery error');
+      return;
+    }
+    const asset = res.assets && res.assets[0];
+    if (!asset) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('avatar', {
+        uri: Platform.OS === 'ios' ? asset.uri.replace('file://', '') : asset.uri,
+        type: asset.type || 'image/jpeg',
+        name: asset.fileName || 'avatar.jpg',
+      });
+      
+      const uploadRes = await uploadAvatar(formData).unwrap();
+      
+      // uploadRes is the unpacked data from baseApi, so it's directly { profile_photo_url: '...' }
+      if (uploadRes?.profile_photo_url) {
+        dispatch(updateUserAvatar(uploadRes.profile_photo_url));
+        storage.setUser({ ...user, avatar_url: uploadRes.profile_photo_url });
+        showAlert('success', 'Profile Picture Updated', 'Your display picture has been updated successfully.');
+      } else {
+        showAlert('error', 'Upload Failed', 'Invalid response from server.');
+      }
+    } catch (err) {
+      console.log('Upload error:', err);
+      showAlert('error', 'Upload Failed', err?.data?.error || err?.error || err?.message || 'Could not upload display picture.');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {AlertComponent}
@@ -60,9 +119,29 @@ export const ProfileScreen = ({ navigation }) => {
         {/* User Identity Card */}
         <FluentCard style={styles.identityCard}>
           <View style={styles.avatarRow}>
-            <View style={styles.avatarCircle}>
-              <Text style={styles.avatarText}>{initials}</Text>
-            </View>
+            <TouchableOpacity 
+              style={styles.avatarCircle}
+              onPress={handleUploadDP}
+              disabled={isUploadingAvatar}
+              activeOpacity={0.8}
+            >
+              {user.avatar_url ? (
+                <Image 
+                  source={{ uri: `${API_BASE_URL}${user.avatar_url}` }} 
+                  style={{ width: '100%', height: '100%', borderRadius: 32 }}
+                />
+              ) : (
+                <Text style={styles.avatarText}>{initials}</Text>
+              )}
+              {isUploadingAvatar && (
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 32, justifyContent: 'center', alignItems: 'center' }]}>
+                  <ActivityIndicator size="small" color="#fff" />
+                </View>
+              )}
+              <View style={styles.editIconBadge}>
+                <Text style={{fontSize: 10}}>✏️</Text>
+              </View>
+            </TouchableOpacity>
             <View style={styles.identityDetails}>
               <Text style={styles.userName}>{user.name || 'Sales Representative'}</Text>
               <Text style={styles.userRole}>
@@ -218,6 +297,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 4,
+  },
+  editIconBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   avatarText: {
     color: colors.textOnPrimary,

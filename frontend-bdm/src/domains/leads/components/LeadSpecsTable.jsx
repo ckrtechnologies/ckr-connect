@@ -5,7 +5,7 @@ import { typography } from '../../../shared/theme/typography.js';
 import { spacing } from '../../../shared/theme/spacing.js';
 import { formatCurrency, formatDate, formatDateTime } from '../../../shared/utils/formatters.js';
 
-export const LeadSpecsTable = ({ lead, interactionCount = 0 }) => {
+export const LeadSpecsTable = ({ lead, interactionCount = 0, currentUser }) => {
   const specs = [
     { label: '📞 Phone', value: lead.phone || 'N/A' },
     { label: '✉️ Email', value: lead.email || 'N/A' },
@@ -42,7 +42,7 @@ export const LeadSpecsTable = ({ lead, interactionCount = 0 }) => {
     },
     {
       label: '👤 Assigned BDM',
-      value: lead.assigned_bdm_name || 'Aarav Sharma (Self)',
+      value: lead.assigned_bdm_name || (currentUser?.name ? `${currentUser.name} (Self)` : 'Self'),
     },
     {
       label: '🌐 Inbound Source',

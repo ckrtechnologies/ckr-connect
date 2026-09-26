@@ -46,6 +46,7 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
   include("/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/RelWithDebInfo/1u6z1w2h/x86/AsyncStorageSpec_autolinked_build/cmake_install.cmake")
   include("/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/RelWithDebInfo/1u6z1w2h/x86/rndocumentpickerCGen_autolinked_build/cmake_install.cmake")
+  include("/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/RelWithDebInfo/1u6z1w2h/x86/RNImagePickerSpec_autolinked_build/cmake_install.cmake")
   include("/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/RelWithDebInfo/1u6z1w2h/x86/RNKC_autolinked_build/cmake_install.cmake")
   include("/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/RelWithDebInfo/1u6z1w2h/x86/rnreanimated_autolinked_build/cmake_install.cmake")
   include("/Users/chandanmallik/projects/ckrcrm/frontend-bdm/android/app/.cxx/RelWithDebInfo/1u6z1w2h/x86/safeareacontext_autolinked_build/cmake_install.cmake")
